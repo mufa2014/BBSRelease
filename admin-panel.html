@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Data Absensi</title>
+    <style>
+        *{box-sizing:border-box;font-family:Arial,sans-serif;margin:0;padding:0}
+        body{background:#f8fafc;padding:1rem;max-width:1400px;margin:0 auto}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:.5rem}
+        h1{color:#1e293b;font-size:1.5rem}
+        .btn{padding:.5rem 1rem;border:none;border-radius:6px;cursor:pointer;font-weight:500;text-decoration:none;display:inline-block}
+        .btn:disabled{opacity:0.5;cursor:not-allowed}
+        .btn-keluar{background:#ef4444;color:#fff}
+        .btn-muat{background:#16a34a;color:#fff;font-size:1rem;padding:.5rem .75rem}
+        .btn-unduh{background:#f59e0b;color:#fff;margin-left:.5rem}
+        .btn-rekap{background:#8b5cf6;color:#fff;margin-left:.5rem}
+        .btn-pengaturan{background:#0ea5e9;color:#fff;margin-left:.5rem}
+        .btn-simpan{background:#047857;color:#fff;margin-top:.5rem}
+        .btn-ambil-lokasi{background:#6366f1;color:#fff;margin-top:.5rem}
+        .kontrol{background:#fff;padding:1rem;border-radius:8px;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        .pengaturan-box{background:#f0f9ff;border:1px solid #7dd3fc;padding:1rem;border-radius:8px;margin-bottom:1rem;display:none}
+        .pengaturan-box.tampil{display:block}
+        .pengaturan-judul{font-weight:600;color:#0369a1;margin-bottom:.75rem}
+        .baris-input{margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+        .baris-input label{min-width:120px;color:#1e293b}
+        .rekap-box{background:#f0f9ff;border:1px solid #bae6fd;padding:1rem;border-radius:8px;margin-bottom:1rem;display:none}
+        .rekap-box.tampil{display:block}
+        .rekap-judul{font-weight:600;color:#0369a1;margin-bottom:.5rem}
+        .rekap-item{margin:.25rem 0;color:#1e293b}
+        .tabel-wrap{overflow-x:auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+        table{width:100%;border-collapse:collapse}
+        th,td{padding:.75rem;text-align:left;border-bottom:1px solid #e2e8f0;font-size:.85rem;white-space:nowrap}
+        th{background:#f1f5f9;font-weight:600;color:#334155}
+        tr:hover{background:#f8fafc}
+        .kosong{padding:2rem;text-align:center;color:#64748b}
+        .foto-absen{max-width:80px;border-radius:4px;cursor:pointer;transition:transform .2s}
+        .foto-absen:hover{transform:scale(1.05)}
+        .link-maps{color:#2563eb;text-decoration:underline;cursor:pointer}
+        .modal-foto{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center}
+        .modal-foto.tampil{display:flex}
+        .modal-foto img{max-width:90%;max-height:85vh;border-radius:6px;box-shadow:0 0 25px rgba(0,0,0,.5)}
+        .tombol-tutup{position:absolute;top:15px;right:25px;color:#fff;font-size:35px;font-weight:bold;cursor:pointer}
+        input,select{padding:.5rem;border:1px solid #cbd5e0;border-radius:6px;margin-right:.5rem;margin-bottom:.5rem}
+        .jenis-masuk{color:#15803d;font-weight:600;background:#dcfce7;padding:.3rem .6rem;border-radius:20px;display:inline-block}
+        .jenis-pulang{color:#b45309;font-weight:600;background:#fff7ed;padding:.3rem .6rem;border-radius:20px;display:inline-block}
+        .jenis-lain{color:#1d4ed8;font-weight:600;background:#eff6ff;padding:.3rem .6rem;border-radius:20px;display:inline-block}
+    </style>
+</head>
+<body>
+
+<script>
+if(sessionStorage.getItem("admin_logged_in") !== "true" && localStorage.getItem("admin_logged_in") !== "true"){
+    alert("Silakan login terlebih dahulu!");
+    window.location.href = "admin-login.html";
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+    const hariIni = new Date().toISOString().split("T")[0];
+    document.getElementById("filterTanggal").value = hariIni;
+    ambilData();
+});
+</script>
+
+<div id="jendelaFoto" class="modal-foto" onclick="tutupFoto()">
+    <span class="tombol-tutup">&times;</span>
+    <img id="gambarBesar" src="" alt="Foto Absen">
+</div>
+
+<div class="header">
+    <h1>📊 Rekapitulasi Riwayat Absensi</h1>
+    <div>
+        <button class="btn btn-muat" onclick="ambilData()" title="Muat Ulang Data">🔄 Reload</button>
+        <button class="btn btn-rekap" onclick="tampilRekap()">📋 Rekap Per Orang</button>
+        <button class="btn btn-pengaturan" onclick="tampilPengaturan()">⚙️ Atur Lokasi</button>
+        <button class="btn btn-unduh" onclick="unduhCSV()">💾 Unduh CSV</button>
+        <button class="btn btn-keluar" onclick="keluar()">🚪 Keluar</button>
+    </div>
+</div>
+
+<div id="kotakPengaturan" class="pengaturan-box">
+    <div class="pengaturan-judul">📍 Pengaturan Lokasi Kantor & Batas Absen</div>
+    <div class="baris-input">
+        <label>Latitude Kantor:</label>
+        <input type="text" id="latKantor" placeholder="Contoh: -2.167495" style="width:180px">
+    </div>
+    <div class="baris-input">
+        <label>Longitude Kantor:</label>
+        <input type="text" id="lngKantor" placeholder="Contoh: 106.008320" style="width:180px">
+    </div>
+    <div class="baris-input">
+        <label>Batas Radius (Meter):</label>
+        <input type="number" id="jarakIzinkan" placeholder="Contoh: 100" min="10" max="100000" style="width:120px">
+    </div>
+    <button class="btn btn-ambil-lokasi" onclick="ambilLokasiSekarang()">📍 Ambil Lokasi Saat Ini</button>
+    <br>
+    <button class="btn btn-simpan" onclick="simpanPengaturan()">✅ Simpan Pengaturan</button>
+    <div id="pesanPengaturan" style="margin-top:.5rem;font-weight:500"></div>
+</div>
+
+<div class="kontrol">
+    <input type="date" id="filterTanggal">
+    <input type="text" id="filterNama" placeholder="Cari Nama / NIP...">
+    <button class="btn" onclick="filterData()">🔍 Cari</button>
+    <button class="btn" onclick="resetFilter()">↩️ Reset Filter</button>
+</div>
+
+<div id="kotakRekap" class="rekap-box">
+    <div class="rekap-judul">📋 Ringkasan Kehadiran</div>
+    <div>
+        <select id="pilihBulan">
+            <option value="">Pilih Bulan</option>
+            <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option>
+            <option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option>
+            <option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option>
+            <option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
+        </select>
+        <input type="number" id="pilihTahun" placeholder="Tahun" min="2020" max="2030" value="2026" style="width:100px">
+        <input type="text" id="pilihNamaRekap" placeholder="Nama Karyawan / NIP">
+        <button class="btn btn-rekap" onclick="hitungRekap()">✅ Tampilkan</button>
+    </div>
+    <div id="hasilRekap" style="margin-top:.75rem"></div>
+</div>
+
+<div class="tabel-wrap">
+    <table id="tabelData">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Jam</th>
+                <th>Jenis Absen</th>
+                <th>Nama Lengkap</th>
+                <th>NIP</th>
+                <th>Jabatan</th>
+                <th>Lokasi</th>
+                <th>Foto Absen</th>
+            </tr>
+        </thead>
+        <tbody id="isiTabel">
+            <tr><td colspan="8" class="kosong">Sedang memuat data...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwR351ahfsHDejRrZWja6e1JNcV9uKtCA5bwy5C5JRNGKikC13vGxFuk0gxUIZ_sismYw/exec";
+let dataMentah = [];
+let sedangMemproses = false;
+
+function keluar(){
+    sessionStorage.removeItem("admin_logged_in");
+    localStorage.removeItem("admin_logged_in");
+    window.location.href = "admin-login.html";
+}
+
+function bukaFoto(sumber){
+    const fotoBersih = String(sumber || "").trim();
+    if(!fotoBersih) return alert("Foto tidak tersedia");
+    document.getElementById("gambarBesar").src = fotoBersih;
+    document.getElementById("jendelaFoto").classList.add("tampil");
+}
+
+function tutupFoto(){
+    document.getElementById("jendelaFoto").classList.remove("tampil");
+    document.getElementById("gambarBesar").src = "";
+}
+
+function tampilRekap(){
+    document.getElementById("kotakRekap").classList.toggle("tampil");
+}
+
+function tampilPengaturan(){
+    document.getElementById("kotakPengaturan").classList.toggle("tampil");
+    if(document.getElementById("kotakPengaturan").classList.contains("tampil")) muatPengaturan();
+}
+
+function ambilLokasiSekarang(){
+    const pesan = document.getElementById("pesanPengaturan");
+    pesan.textContent = "⏳ Sedang mengambil lokasi GPS...";
+    pesan.style.color = "#2563eb";
+    if(!navigator.geolocation){
+        pesan.textContent = "❌ Perangkat tidak mendeteksi lokasi";
+        pesan.style.color = "#dc2626";
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            document.getElementById("latKantor").value = pos.coords.latitude.toFixed(6);
+            document.getElementById("lngKantor").value = pos.coords.longitude.toFixed(6);
+            pesan.textContent = "✅ Lokasi berhasil diambil!";
+            pesan.style.color = "#047857";
+        },
+        err => {
+            pesan.textContent = "❌ Gagal ambil lokasi: " + err.message;
+            pesan.style.color = "#dc2626";
+        },
+        {enableHighAccuracy:true}
+    );
+}
+
+async function muatPengaturan(){
+    const pesan = document.getElementById("pesanPengaturan");
+    pesan.textContent = "⏳ Memuat pengaturan...";
+    pesan.style.color = "#2563eb";
+    
+    try{
+        const res = await fetch(`${URL_SCRIPT}?sumber=getPengaturan&t=${Date.now()}`);
+        const hasil = await res.json();
+        
+        if(hasil.status === "berhasil" && hasil.data){
+            document.getElementById("latKantor").value = hasil.data.lat || "";
+            document.getElementById("lngKantor").value = hasil.data.lng || "";
+            document.getElementById("jarakIzinkan").value = hasil.data.jarak || "";
+            pesan.textContent = "✅ Pengaturan berhasil dimuat!";
+            pesan.style.color = "#047857";
+        } else {
+            pesan.textContent = "⚠️ Pengaturan belum tersimpan di server";
+            pesan.style.color = "#f59e0b";
+        }
+    }catch(e){
+        pesan.textContent = "⚠️ Gagal memuat pengaturan: " + e.message;
+        pesan.style.color = "#f59e0b";
+    }
+}
+
+async function simpanPengaturan(){
+    if(sedangMemproses) return;
+    const lat = Number(document.getElementById("latKantor").value);
+    const lng = Number(document.getElementById("lngKantor").value);
+    const jarak = Number(document.getElementById("jarakIzinkan").value || 0);
+    const pesan = document.getElementById("pesanPengaturan");
+
+    if(!lat || !lng || !jarak){
+        pesan.textContent = "❌ Lengkapi semua isian dengan benar!";
+        pesan.style.color = "#dc2626";
+        return;
+    }
+
+    sedangMemproses = true;
+    pesan.textContent = "⏳ Sedang mengirim data...";
+    pesan.style.color = "#2563eb";
+    
+    try{
+        const res = await fetch(URL_SCRIPT, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                aksi: "simpanPengaturan",
+                lat: lat,
+                lng: lng,
+                jarak: jarak
+            })
+        });
+        
+        const hasil = await res.json();
+        
+        if(hasil.status === "berhasil"){
+            pesan.textContent = "✅ " + hasil.pesan;
+            pesan.style.color = "#047857";
+        }else{
+            pesan.textContent = "❌ Gagal: " + (hasil.pesan || "Terjadi kesalahan");
+            pesan.style.color = "#dc2626";
+        }
+    }catch(e){
+        pesan.textContent = "❌ Kesalahan koneksi: " + e.message;
+        pesan.style.color = "#dc2626";
+    }
+    sedangMemproses = false;
+}
+
+async function ambilData(){
+    if(sedangMemproses) return;
+    sedangMemproses = true;
+    const t = document.getElementById("isiTabel");
+    t.innerHTML = `<tr><td colspan="8" class="kosong">🔄 Sedang memuat data absensi...</td></tr>`;
+    
+    try{
+        const res = await fetch(`${URL_SCRIPT}?sumber=getRiwayat&t=${Date.now()}`);
+        const hasil = await res.json();
+        
+        if (hasil.status === "berhasil" && Array.isArray(hasil.data)) {
+            dataMentah = hasil.data;
+        } else {
+            dataMentah = [];
+        }
+
+        filterData();
+    }catch(e){
+        t.innerHTML = `<tr><td colspan="8" class="kosong" style="color:#ef4444">❌ Gagal memuat data: ${e.message}</td></tr>`;
+    }
+    sedangMemproses = false;
+}
+
+function formatTanggalTampil(strWaktu){
+    if(!strWaktu) return "-";
+    const tglSaja = String(strWaktu).split(" ")[0];
+    const bagian = tglSaja.split("-");
+    if (bagian.length === 3 && bagian[0].length === 4) {
+        return `${bagian[2]}-${bagian[1]}-${bagian[0]}`;
+    }
+    return tglSaja;
+}
+
+function formatJamTampil(strJam) {
+    if (!strJam || strJam === "-") return "-";
+    const str = String(strJam);
+    const match = str.match(/\d{2}:\d{2}:\d{2}/);
+    return match ? match[0] : str;
+}
+
+function tampilkanTabel(data){
+    const t = document.getElementById("isiTabel");
+    t.innerHTML = "";
+    if(!data || !Array.isArray(data) || data.length === 0){
+        t.innerHTML = `<tr><td colspan="8" class="kosong">Belum ada riwayat absensi</td></tr>`;
+        return;
+    }
+    data.forEach(baris => {
+        const tr = document.createElement("tr");
+        let tampilFoto = "-";
+        const fotoBersih = String(baris.foto || "").trim();
+        if(fotoBersih){
+            tampilFoto = `<img src="${fotoBersih}" class="foto-absen" alt="Foto Absen" onclick="bukaFoto('${fotoBersih.replace(/'/g,"\\'")}')">`;
+        }
+        
+        let linkLokasi = "-";
+        if(baris.lat && baris.lng){
+            const lat = String(baris.lat).trim();
+            const lng = String(baris.lng).trim();
+            linkLokasi = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="link-maps">Lihat Lokasi</a>`;
+        }
+
+        let tampilJenis = "-";
+        const jenisBersih = String(baris.jenis || "").toLowerCase();
+        if(jenisBersih.includes("masuk kerja")) tampilJenis = `<span class="jenis-masuk">🟢 Masuk Kerja</span>`;
+        else if(jenisBersih.includes("pulang")) tampilJenis = `<span class="jenis-pulang">🟠 Pulang Kerja</span>`;
+        else if(jenisBersih.includes("istirahat") || jenisBersih.includes("kembali")) tampilJenis = `<span class="jenis-lain">🔵 ${baris.jenis}</span>`;
+
+        tr.innerHTML = `
+            <td>${formatTanggalTampil(baris.waktu)}</td>
+            <td>${formatJamTampil(baris.jam)}</td>
+            <td>${tampilJenis}</td>
+            <td>${baris.nama || "-"}</td>
+            <td>${baris.nip || "-"}</td>
+            <td>${baris.jabatan || "-"}</td>
+            <td>${linkLokasi}</td>
+            <td>${tampilFoto}</td>
+        `;
+        t.appendChild(tr);
+    });
+}
+
+function filterData(){
+    if(!Array.isArray(dataMentah) || !dataMentah.length){
+        tampilkanTabel([]);
+        return;
+    }
+    const tglPilih = document.getElementById("filterTanggal").value.trim();
+    const kataKunci = document.getElementById("filterNama").value.trim().toLowerCase();
+    let hasil = [...dataMentah];
+    
+    if(tglPilih){
+        hasil = hasil.filter(item => {
+            if(!item.waktu) return false;
+            const tglAsli = String(item.waktu).split(" ")[0];
+            return tglAsli === tglPilih;
+        });
+    }
+
+    if(kataKunci){
+        hasil = hasil.filter(item => {
+            const nama = String(item.nama || "").toLowerCase();
+            const nip = String(item.nip || "").trim().toLowerCase();
+            return nama.includes(kataKunci) || nip.includes(kataKunci);
+        });
+    }
+
+    tampilkanTabel(hasil);
+}
+
+function resetFilter(){
+    document.getElementById("filterNama").value = "";
+    const hariIni = new Date().toISOString().split("T")[0];
+    document.getElementById("filterTanggal").value = hariIni;
+    filterData();
+}
+
+function hitungRekap(){
+    if(!Array.isArray(dataMentah) || !dataMentah.length) return alert("⚠️ Silakan muat data terlebih dahulu!");
+    const bulan = document.getElementById("pilihBulan").value;
+    const tahun = document.getElementById("pilihTahun").value.trim();
+    const namaCari = document.getElementById("pilihNamaRekap").value.trim().toLowerCase();
+    if(!bulan || !tahun || !namaCari) return alert("Lengkapi Bulan, Tahun, dan Nama/NIP");
+
+    const awalanTgl = `${tahun}-${bulan}`;
+    const dataFilter = dataMentah.filter(item => item.waktu && String(item.waktu).startsWith(awalanTgl) && (String(item.nama||"").toLowerCase().includes(namaCari) || String(item.nip||"").toLowerCase().includes(namaCari)));
+    if(!dataFilter.length){
+        document.getElementById("hasilRekap").innerHTML = `<div style="color:#dc2626">❌ Tidak ditemukan data untuk kriteria tersebut!</div>`;
+        return;
+    }
+    let masuk = 0, istirahat = 0, kembali = 0, pulang = 0;
+    dataFilter.forEach(b => {
+        const jenis = String(b.jenis || "").toLowerCase();
+        if(jenis.includes("masuk kerja")) masuk++;
+        else if(jenis.includes("istirahat")) istirahat++;
+        else if(jenis.includes("kembali")) kembali++;
+        else if(jenis.includes("pulang")) pulang++;
+    });
+    document.getElementById("hasilRekap").innerHTML = `
+        <div class="rekap-item">👤 Nama: <strong>${dataFilter[0].nama}</strong> | NIP: ${dataFilter[0].nip}</div>
+        <div class="rekap-item">📅 Periode: Bulan ${bulan} Tahun ${tahun}</div>
+        <div class="rekap-item">🟢 Masuk Kerja: <strong>${masuk}</strong> kali</div>
+        <div class="rekap-item">🔵 Mulai Istirahat: <strong>${istirahat}</strong> kali</div>
+        <div class="rekap-item">🔵 Kembali Kerja: <strong>${kembali}</strong> kali</div>
+        <div class="rekap-item">🟠 Pulang Kerja: <strong>${pulang}</strong> kali</div>
+        <div class="rekap-item">📝 Keterangan: ${masuk === pulang ? "✅ Kehadiran lengkap" : "⚠️ Belum lengkap Masuk/Pulang"}</div>
+    `;
+}
+
+function unduhCSV(){
+    if(!Array.isArray(dataMentah) || !dataMentah.length) return alert("Tidak ada data untuk diunduh");
+    let csv = "\uFEFFTanggal,Jam,Jenis Absen,Nama,NIP,Jabatan,Latitude,Longitude,Foto\n";
+    dataMentah.forEach(b => {
+        const tglFormatted = formatTanggalTampil(b.waktu);
+        const jamFormatted = formatJamTampil(b.jam);
+        csv += `"${tglFormatted}","${jamFormatted}","${b.jenis||"-"}","${b.nama||"-"}","${b.nip||"-"}","${b.jabatan||"-"}","${b.lat||"-"}","${b.lng||"-"}","${b.foto||""}"\n`;
+    });
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement("a"), {href:url,download:`Rekap_Absensi_${new Date().toISOString().slice(0,10)}.csv`});
+    a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
