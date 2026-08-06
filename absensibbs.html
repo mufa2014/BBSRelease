@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Absensi Karyawan BBS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script>
+        tailwind.config = { 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        primary: '#165DFF',
+                        success: '#00B42A',
+                        danger: '#F53F3F',
+                        warning: '#FF7D00'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100vw; min-height: 100vh; overflow-x: hidden; background: #f9fafb; font-family: system-ui, -apple-system, sans-serif; }
+        .container { width: 100%; max-width: 100%; padding: 12px 12px 24px; margin: 0 auto; }
+        .card { width: 100%; }
+        button, select, input { font-size: 16px; width: 100%; cursor: pointer; touch-action: manipulation; }
+        button:active { opacity: 0.85; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        img, video { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; display: block; }
+        .kotak-kamera { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin: 0 auto; }
+        .hidden { display: none !important; }
+        .foto-riwayat { max-width: 120px; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
+        .foto-riwayat:hover { transform: scale(1.05); }
+        .modal-foto { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 10px; }
+        .modal-foto img { max-width: 100%; max-height: 80vh; border-radius: 0; }
+        .indikator-status { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .titik { width: 10px; height: 10px; border-radius: 50%; }
+        .kotak-cek { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; transition: all 0.2s; }
+        .cek-ok { background: #ECFDF3; color: #027A48; border: 1px solid #ABEFC6; }
+        .cek-gagal { background: #FFF2F2; color: #D92D2D; border: 1px solid #FECDCD; }
+        .cek-info { background: #F2F4F7; color: #344054; border: 1px solid #D5D9E2; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="text-center mb-5">
+        <h1 class="text-xl font-bold text-primary">📌 Absensi Karyawan BBS v5</h1>
+        <p class="text-xs text-gray-500 mt-1">Data Terpusat & Sinkron</p>
+    </div>
+
+    <div id="halamanLogin" class="card bg-white rounded-xl shadow-sm p-5 mb-4 space-y-4">
+        <h2 class="text-lg font-semibold text-center">🔐 Masuk</h2>
+        <div id="cekStatusServer" class="indikator-status bg-gray-100 text-gray-600 mx-auto w-fit">
+            <span class="titik bg-gray-400"></span>
+            <span id="teksStatus">Mengecek server...</span>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1.5">Pilih Nama</label>
+            <select id="namaLogin" class="border rounded-lg px-4 py-3 bg-white">
+                <option value="">-- Memuat data... --</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1.5">Kata Sandi / PIN</label>
+            <input type="password" id="sandiLogin" placeholder="Masukkan sandi" class="border rounded-lg px-4 py-3">
+        </div>
+        <button id="btnMasuk" class="bg-primary text-white py-3 rounded-lg font-medium">Masuk</button>
+        <p id="pesanLogin" class="text-xs text-center mt-2 min-h-[16px]"></p>
+    </div>
+
+    <div id="halamanKaryawan" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <p class="text-sm">Halo, <span id="namaUser" class="font-semibold">-</span></p>
+            <button id="keluar" class="text-danger text-sm">Keluar</button>
+        </div>
+        <div class="card bg-white rounded-xl shadow-sm p-5 mb-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Jenis Kehadiran</label>
+                <select id="jenis" class="border rounded-lg px-4 py-3 bg-white">
+                    <option value="Masuk Kerja">🕒 Masuk Kerja</option>
+                    <option value="Istirahat">🥪 Mulai Istirahat</option>
+                    <option value="Kembali">🔄 Kembali Kerja</option>
+                    <option value="Pulang">🏠 Pulang Kerja</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card bg-white rounded-xl shadow-sm p-5 mb-4">
+            <h2 class="text-sm font-medium mb-3">📷 Ambil Foto Selfie</h2>
+            <div class="kotak-kamera">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="canvas" class="hidden"></canvas>
+                <img id="preview" class="hidden absolute top-0 left-0 w-full h-full object-cover">
+            </div>
+            <button id="btnKamera" class="mt-3 bg-primary text-white py-3 rounded-lg">Ambil Foto</button>
+        </div>
+
+        <div class="card bg-white rounded-xl shadow-sm p-5 mb-4">
+            <h2 class="text-sm font-medium mb-2">📍 Lokasi Kantor & Posisi Anda</h2>
+            <p id="statusLokasi" class="text-gray-500">Mendeteksi lokasi...</p>
+            <p id="jarakInfo" class="text-xs mt-1"></p>
+            <p id="koordinat" class="text-xs mt-1"></p>
+            <button id="cekUlangLokasi" class="mt-3 text-primary text-sm">🔄 Cek Ulang</button>
+        </div>
+
+        <button id="simpanAbsen" class="bg-success text-white py-3.5 rounded-xl font-bold text-lg" disabled>✅ Simpan Absensi</button>
+        
+        <div id="statusPengecekan" class="kotak-cek cek-info">
+            ⏳ Belum ada pengecekan
+        </div>
+
+        <p id="pesan" class="mt-3 text-center text-sm min-h-[20px]"></p>
+    </div>
+
+    <div id="modalFoto" class="modal-foto hidden">
+        <img id="fotoBesar" alt="Foto">
+        <button id="tutupFoto" class="absolute top-4 right-4 text-white text-2xl">✕</button>
+    </div>
+</div>
+
+<script>
+const LINK_API = "https://script.google.com/macros/s/AKfycbwR351ahfsHDejRrZWja6e1JNcV9uKtCA5bwy5C5JRNGKikC13vGxFuk0gxUIZ_sismYw/exec";
+
+let LOKASI_KANTOR = { lat: -2.167495, lng: 106.008320, jarakMaksimalMeter: 100 };
+let daftarKaryawan = [];
+let userLogin = { nama: "", nip: "", jabatan: "", admin: false };
+let fotoDataURL = "", lokasi = { lat: null, lng: null }, diWilayahKantor = false;
+let sedangMemproses = false;
+
+async function cekStatusServer(){
+    const kotak = document.getElementById("cekStatusServer");
+    const titik = kotak.querySelector(".titik");
+    const teks = document.getElementById("teksStatus");
+    kotak.className = "indikator-status bg-gray-100 text-gray-600 mx-auto w-fit";
+    titik.className = "titik bg-gray-400";
+    teks.textContent = "Mengecek server...";
+
+    try {
+        const res = await fetch(LINK_API + "?sumber=getPengaturan", { cache: "no-store" });
+        if(res.ok){
+            kotak.className = "indikator-status bg-green-100 text-green-700 mx-auto w-fit";
+            titik.className = "titik bg-green-500";
+            teks.textContent = "✅ Server Online";
+        } else throw new Error("Respon tidak normal");
+    } catch {
+        kotak.className = "indikator-status bg-red-100 text-red-700 mx-auto w-fit";
+        titik.className = "titik bg-red-500";
+        teks.textContent = "❌ Server Offline";
+    }
+}
+
+function hitungJarakMeter(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+async function muatDaftarKaryawan(){
+    try{
+        const res = await fetch(LINK_API + "?sumber=getKaryawan", { cache: "no-store" });
+        const h = await res.json();
+        if(h.status === "berhasil"){
+            daftarKaryawan = h.data;
+            const s = document.getElementById("namaLogin");
+            s.innerHTML = `<option value="">-- Pilih Nama --</option>`;
+            daftarKaryawan.forEach(k => {
+                s.innerHTML += `<option value="${k.nama}#${k.nip}#${k.jabatan}#${k.sandi}">${k.nama}</option>`;
+            });
+        } else {
+            pesanLogin("Server: " + h.pesan);
+        }
+    } catch(e) {
+        pesanLogin("❌ Cek Link API: " + e.message);
+    }
+}
+
+async function muatPengaturan(){
+  try{
+    const res = await fetch(LINK_API + "?sumber=getPengaturan", { cache: "no-store" });
+    const h = await res.json();
+    if(h.status === "berhasil" && h.data){
+      LOKASI_KANTOR.lat = Number(h.data.lat);
+      LOKASI_KANTOR.lng = Number(h.data.lng);
+      LOKASI_KANTOR.jarakMaksimalMeter = Number(h.data.jarak);
+    }
+  } catch(e){
+      console.log("Gagal muat pengaturan");
+  }
+}
+
+document.getElementById("cekStatusServer").addEventListener("click", cekStatusServer);
+
+document.getElementById("btnMasuk").addEventListener("click", () => {
+    const p = document.getElementById("namaLogin").value;
+    const sandi = document.getElementById("sandiLogin").value.trim();
+    if(!p) return pesanLogin("Pilih nama dulu");
+    const [nama, nip, jabatan, benar] = p.split("#");
+    if(sandi !== benar) return pesanLogin("❌ Sandi salah!");
+    userLogin = { nama, nip, jabatan, admin: (jabatan === "Admin") };
+    document.getElementById("namaUser").textContent = nama;
+    document.getElementById("halamanLogin").classList.add("hidden");
+    document.getElementById("halamanKaryawan").classList.remove("hidden");
+    initKamera();
+    initLokasi();
+});
+
+function pesanLogin(t){ document.getElementById("pesanLogin").textContent = t; }
+
+async function initKamera(){
+    try{
+        document.getElementById("video").srcObject = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }
+        });
+    } catch {
+        pesan("Izinkan kamera");
+    }
+}
+
+document.getElementById("btnKamera").addEventListener("click", () => {
+    const v = document.getElementById("video"), c = document.getElementById("canvas");
+    c.width = v.videoWidth || 640;
+    c.height = v.videoHeight || 480;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(v, 0, 0);
+    fotoDataURL = c.toDataURL("image/jpeg", 0.8);
+    document.getElementById("preview").src = fotoDataURL;
+    document.getElementById("preview").classList.remove("hidden");
+});
+
+function initLokasi(){
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(p => {
+        lokasi.lat = p.coords.latitude; 
+        lokasi.lng = p.coords.longitude;
+        const jarak = hitungJarakMeter(lokasi.lat, lokasi.lng, LOKASI_KANTOR.lat, LOKASI_KANTOR.lng);
+        diWilayahKantor = jarak <= LOKASI_KANTOR.jarakMaksimalMeter;
+        const link = `https://www.google.com/maps?q=${lokasi.lat},${lokasi.lng}`;
+        const tombolSimpan = document.getElementById("simpanAbsen");
+        
+        if(diWilayahKantor){
+            document.getElementById("statusLokasi").textContent = "✅ Lokasi Diverifikasi (Di Area Kantor)";
+            document.getElementById("statusLokasi").className = "text-success font-semibold";
+            tombolSimpan.disabled = false;
+        } else {
+            document.getElementById("statusLokasi").textContent = "⚠️ LUAR AREA KANTOR! Tidak Bisa Absen";
+            document.getElementById("statusLokasi").className = "text-danger font-semibold";
+            tombolSimpan.disabled = true;
+        }
+        document.getElementById("jarakInfo").textContent = `Jarak dari kantor: ${Math.round(jarak)} meter (Batas: ${LOKASI_KANTOR.jarakMaksimalMeter}m)`;
+        document.getElementById("koordinat").innerHTML = `<a href="${link}" target="_blank" class="text-primary underline">Buka Peta</a> | ${lokasi.lat.toFixed(6)}, ${lokasi.lng.toFixed(6)}`;
+    }, e => {
+        document.getElementById("statusLokasi").textContent = "❌ Izinkan Lokasi GPS";
+        document.getElementById("statusLokasi").className = "text-danger font-semibold";
+    }, { enableHighAccuracy: true, maximumAge: 0 });
+}
+
+document.getElementById("cekUlangLokasi").addEventListener("click", initLokasi);
+
+document.getElementById("simpanAbsen").addEventListener("click", async () => {
+    if(sedangMemproses) return;
+    if(!fotoDataURL) return pesan("Ambil foto selfie dulu!");
+    if(!lokasi.lat) return pesan("Lokasi belum siap!");
+    if(!diWilayahKantor) return pesan("❌ Anda berada di luar area kantor!");
+
+    sedangMemproses = true;
+    const btn = document.getElementById("simpanAbsen");
+    btn.disabled = true;
+    btn.textContent = "⏳ Mengirim...";
+
+    const kotakCek = document.getElementById("statusPengecekan");
+    kotakCek.className = "kotak-cek cek-info";
+    kotakCek.innerHTML = "⏳ Mengecek aturan & mengirim data...";
+
+    pesan("💾 Menyimpan ke server...");
+
+    const kirim = {
+        aksi: "simpanAbsen",
+        jenis: document.getElementById("jenis").value,
+        nama: userLogin.nama,
+        nip: userLogin.nip,
+        jabatan: userLogin.jabatan,
+        lat: lokasi.lat,
+        lng: lokasi.lng,
+        foto: fotoDataURL
+    };
+
+    try {
+        const hasil = await fetch(LINK_API, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(kirim)
+        });
+        const jawab = await hasil.json();
+        
+        if(jawab.status === "berhasil"){
+            kotakCek.className = "kotak-cek cek-ok";
+            kotakCek.innerHTML = "✅ " + jawab.pesan;
+            pesan("✅ BERHASIL DISIMPAN");
+            fotoDataURL = "";
+            document.getElementById("preview").classList.add("hidden");
+        } else {
+            kotakCek.className = "kotak-cek cek-gagal";
+            kotakCek.innerHTML = "🚫 " + jawab.pesan;
+            pesan("❌ " + jawab.pesan);
+        }
+    } catch (e) {
+        kotakCek.className = "kotak-cek cek-gagal";
+        kotakCek.innerHTML = "🚫 Kesalahan koneksi";
+        pesan("❌ Gagal terhubung ke server");
+    }
+
+    sedangMemproses = false;
+    btn.disabled = false;
+    btn.textContent = "✅ Simpan Absensi";
+});
+
+window.bukaFoto = s => {
+    document.getElementById("fotoBesar").src = s;
+    document.getElementById("modalFoto").classList.remove("hidden");
+};
+document.getElementById("tutupFoto").addEventListener("click", () => document.getElementById("modalFoto").classList.add("hidden"));
+
+function pesan(t){
+    const el = document.getElementById("pesan");
+    el.textContent = t;
+    setTimeout(() => el.textContent = "", 4000);
+}
+
+document.getElementById("keluar").addEventListener("click", () => location.reload());
+
+document.addEventListener("DOMContentLoaded", () => {
+  cekStatusServer();
+  muatDaftarKaryawan();
+  muatPengaturan();
+});
+</script>
+</body>
+</html>
