@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - PT. Bangka Biogas Synergy</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    body { background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
+    .card { background: #fff; border-radius: 12px; padding: 2rem; width: 100%; max-width: 420px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #2c3e50; margin-bottom: 1.5rem; font-size: 1.3rem; line-height: 1.4; }
+    .alert { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; font-size: 0.9rem; text-align: center; }
+    .alert.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; display: block; }
+    .alert.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; display: block; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #34495e; }
+    input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+    button { width: 100%; padding: 0.75rem; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; margin-top: 0.5rem; }
+    button:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>🔐 Admin Login<br><small style="font-size: 0.9rem; font-weight: normal; color: #64748b;">PT. Bangka Biogas Synergy</small></h2>
+    <div id="alertBox" class="alert"></div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" required placeholder="Masukkan username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Masukkan password">
+      </div>
+      <button type="submit">Masuk</button>
+    </form>
+  </div>
+
+  <script>
+    function handleLogin(event) {
+      event.preventDefault();
+      const user = document.getElementById('username').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const alertBox = document.getElementById('alertBox');
+
+      if (user === "admin" && pass === "admin123") {
+        sessionStorage.setItem('admin_logged_in', 'true');
+        localStorage.setItem('admin_logged_in', 'true');
+
+        alertBox.className = "alert success";
+        alertBox.innerText = "Login Berhasil! Mengalihkan...";
+        setTimeout(() => {
+          window.location.href = "admin-panel.html";
+        }, 800);
+      } else {
+        alertBox.className = "alert error";
+        alertBox.innerText = "Username atau Password salah!";
+      }
+    }
+  </script>
+
+</body>
+</html>
