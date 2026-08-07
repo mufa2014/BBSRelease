@@ -33,6 +33,23 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #areaCetak, #areaCetak * {
+                visibility: visible;
+            }
+            #areaCetak {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
@@ -48,7 +65,7 @@
                 <button onclick="muatDataRiwayat()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
                     🔄 Reload
                 </button>
-                <button onclick="bukaModalPerOrang()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
+                <button onclick="bukaModalPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
                     📋 Rekap Per Orang
                 </button>
                 <button onclick="bukaModalPengaturan()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
@@ -79,7 +96,7 @@
             </button>
         </div>
 
-        <!-- Tabel Data -->
+        <!-- Tabel Data Utama -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -96,7 +113,6 @@
                         </tr>
                     </thead>
                     <tbody id="tabelBody" class="divide-y divide-slate-100 text-sm">
-                        <!-- Data dimasukkan secara dinamis via JavaScript -->
                     </tbody>
                 </table>
             </div>
@@ -112,7 +128,78 @@
         </div>
     </div>
 
-    <!-- Modal Modal Foto -->
+    <!-- Modal Rekap Per Orang -->
+    <div id="modalPerOrang" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-6 max-w-4xl w-full relative max-h-[90vh] flex flex-col">
+            <button onclick="tutupModalPerOrang()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold no-print">✕</button>
+            
+            <h3 class="font-bold text-slate-800 mb-4 text-xl flex items-center gap-2 no-print">
+                <span>📋</span> Rekap Laporan Absensi Per Orang
+            </h3>
+
+            <!-- Form Filter Individu -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200 no-print">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Karyawan</label>
+                    <select id="rekapPilihKaryawan" class="w-full border rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-primary">
+                        <option value="">-- Pilih Karyawan --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Dari Tanggal</label>
+                    <input type="date" id="rekapTglMulai" class="w-full border rounded-lg p-2 text-sm bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sampai Tanggal</label>
+                    <input type="date" id="rekapTglSelesai" class="w-full border rounded-lg p-2 text-sm bg-white">
+                </div>
+                <div class="md:col-span-3 flex justify-end gap-2 mt-1">
+                    <button onclick="prosesRekapPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        🔍 Tampilkan Rekap
+                    </button>
+                    <button onclick="cetakRekapOrang()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        🖨️ Cetak / PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hasil Area Cetak Rekap -->
+            <div id="areaCetak" class="overflow-y-auto flex-1 p-2 border rounded-xl">
+                <div class="text-center border-b pb-4 mb-4">
+                    <h2 class="text-xl font-bold text-slate-800 uppercase tracking-wide">Laporan Presensi Karyawan</h2>
+                    <p id="infoPeriodeCetak" class="text-sm text-slate-500 mt-1">Periode: -</p>
+                </div>
+
+                <!-- Info Karyawan -->
+                <div class="grid grid-cols-2 gap-2 text-sm mb-4 bg-slate-50 p-3 rounded-lg border">
+                    <div><span class="font-semibold text-slate-600">Nama:</span> <span id="lblRekapNama" class="font-bold text-slate-800">-</span></div>
+                    <div><span class="font-semibold text-slate-600">NIP:</span> <span id="lblRekapNip" class="text-slate-800">-</span></div>
+                    <div><span class="font-semibold text-slate-600">Jabatan:</span> <span id="lblRekapJabatan" class="text-slate-800">-</span></div>
+                    <div><span class="font-semibold text-slate-600">Total Absensasi:</span> <span id="lblRekapTotal" class="font-bold text-indigo-600">0 Record</span></div>
+                </div>
+
+                <!-- Tabel Rekap Individu -->
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 border-b text-xs font-bold text-slate-700">
+                            <th class="p-2 border">No</th>
+                            <th class="p-2 border">Tanggal</th>
+                            <th class="p-2 border">Jam</th>
+                            <th class="p-2 border">Jenis Kehadiran</th>
+                            <th class="p-2 border">Keterangan Lokasi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelRekapOrangBody">
+                        <tr>
+                            <td colspan="5" class="text-center p-4 text-slate-400">Silakan pilih karyawan dan klik Tampilkan Rekap</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Foto -->
     <div id="modalFoto" class="fixed inset-0 bg-black/70 hidden items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl p-4 max-w-lg w-full relative">
             <button onclick="tutupModalFoto()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
@@ -148,10 +235,9 @@
     </div>
 
     <script>
-        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx5spIYpBb4DJFopmqTtHTZdzb2c4AIXfbvSLr2XQrI1By1bsKN3Bk89dxB_fOIH85a-g/exec"; // Masukkan URL Web App Apps Script Anda
+        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx5spIYpBb4DJFopmqTtHTZdzb2c4AIXfbvSLr2XQrI1By1bsKN3Bk89dxB_fOIH85a-g/exec";
         let dataMentah = [];
 
-        // Dapatkan string tanggal hari ini (YYYY-MM-DD)
         function getTanggalHariIni() {
             const hariIni = new Date();
             const yyyy = hariIni.getFullYear();
@@ -160,16 +246,19 @@
             return `${yyyy}-${mm}-${dd}`;
         }
 
-        // Jalankan saat dokumen dimuat
         document.addEventListener("DOMContentLoaded", function() {
             const filterTgl = document.getElementById("filterTanggal");
             if (filterTgl) {
                 filterTgl.value = getTanggalHariIni();
             }
+            
+            // Set tanggal awal modal rekap per orang
+            document.getElementById("rekapTglMulai").value = getTanggalHariIni();
+            document.getElementById("rekapTglSelesai").value = getTanggalHariIni();
+
             muatDataRiwayat();
         });
 
-        // Reset Filter ke Tanggal Hari Ini
         function resetFilter() {
             const filterTgl = document.getElementById("filterTanggal");
             const filterNama = document.getElementById("filterNama");
@@ -178,7 +267,6 @@
             filterData();
         }
 
-        // Ambil Data Riwayat dari Google Apps Script
         function muatDataRiwayat() {
             tampilkanLoading(true);
             fetch(URL_SCRIPT + "?action=getRiwayat")
@@ -188,6 +276,7 @@
                     if (res.status === "berhasil") {
                         dataMentah = res.data || [];
                         filterData();
+                        isiOpsiPilihKaryawan();
                     } else {
                         alert("Gagal memuat data: " + res.pesan);
                     }
@@ -198,13 +287,12 @@
                 });
         }
 
-        // Filter Data berdasarkan Tanggal & Kata Kunci
         function filterData() {
             if (!Array.isArray(dataMentah) || !dataMentah.length) {
                 tampilkanTabel([]);
                 return;
             }
-            const tglPilih = document.getElementById("filterTanggal").value.trim(); // YYYY-MM-DD
+            const tglPilih = document.getElementById("filterTanggal").value.trim();
             const kataKunci = document.getElementById("filterNama").value.trim().toLowerCase();
             let hasil = [...dataMentah];
 
@@ -216,10 +304,8 @@
                     const p = tglAsli.split("-");
                     if (p.length === 3) {
                         if (p[0].length === 4) {
-                            // Format YYYY-MM-DD
                             tglAsli = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
                         } else if (p[2].length === 4) {
-                            // Format DD-MM-YYYY -> ubah ke YYYY-MM-DD
                             tglAsli = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                         }
                     }
@@ -238,7 +324,6 @@
             tampilkanTabel(hasil);
         }
 
-        // Tampilkan Data ke Tabel
         function tampilkanTabel(data) {
             const tbody = document.getElementById("tabelBody");
             const emptyBox = document.getElementById("emptyBox");
@@ -284,7 +369,94 @@
             });
         }
 
-        // Format Tampilan Tanggal DD-MM-YYYY
+        // --- FITUR REKAP PER ORANG ---
+        function isiOpsiPilihKaryawan() {
+            const select = document.getElementById("rekapPilihKaryawan");
+            select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+            
+            const daftarNama = [...new Set(dataMentah.map(item => item.nama))].filter(Boolean);
+            daftarNama.forEach(nama => {
+                const opt = document.createElement("option");
+                opt.value = nama;
+                opt.textContent = nama;
+                select.appendChild(opt);
+            });
+        }
+
+        function bukaModalPerOrang() {
+            document.getElementById("modalPerOrang").classList.remove("hidden");
+            document.getElementById("modalPerOrang").classList.add("flex");
+            isiOpsiPilihKaryawan();
+        }
+
+        function tutupModalPerOrang() {
+            document.getElementById("modalPerOrang").classList.add("hidden");
+            document.getElementById("modalPerOrang").classList.remove("flex");
+        }
+
+        function prosesRekapPerOrang() {
+            const namaPilih = document.getElementById("rekapPilihKaryawan").value;
+            const tglMulai = document.getElementById("rekapTglMulai").value;
+            const tglSelesai = document.getElementById("rekapTglSelesai").value;
+
+            if (!namaPilih) return alert("Silakan pilih karyawan terlebih dahulu!");
+
+            const hasil = dataMentah.filter(item => {
+                if (item.nama !== namaPilih) return false;
+                
+                let tglAsli = String(item.waktu).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
+                const p = tglAsli.split("-");
+                if (p.length === 3 && p[2].length === 4) {
+                    tglAsli = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+
+                if (tglMulai && tglAsli < tglMulai) return false;
+                if (tglSelesai && tglAsli > tglSelesai) return false;
+
+                return true;
+            });
+
+            // Update Label Rekap
+            document.getElementById("lblRekapNama").textContent = namaPilih;
+            document.getElementById("infoPeriodeCetak").textContent = `Periode: ${formatTanggalTampil(tglMulai)} s/d ${formatTanggalTampil(tglSelesai)}`;
+
+            if (hasil.length > 0) {
+                document.getElementById("lblRekapNip").textContent = hasil[0].nip || "-";
+                document.getElementById("lblRekapJabatan").textContent = hasil[0].jabatan || "-";
+            } else {
+                document.getElementById("lblRekapNip").textContent = "-";
+                document.getElementById("lblRekapJabatan").textContent = "-";
+            }
+            document.getElementById("lblRekapTotal").textContent = `${hasil.length} Record`;
+
+            // Render Tabel Rekap Per Orang
+            const tbody = document.getElementById("tabelRekapOrangBody");
+            tbody.innerHTML = "";
+
+            if (hasil.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-slate-400">Tidak ada data absensi untuk periode ini.</td></tr>';
+                return;
+            }
+
+            hasil.forEach((item, idx) => {
+                const tr = document.createElement("tr");
+                tr.className = "border-b hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2 border text-center">${idx + 1}</td>
+                    <td class="p-2 border">${formatTanggalTampil(item.waktu)}</td>
+                    <td class="p-2 border">${item.jam || '-'}</td>
+                    <td class="p-2 border font-semibold">${item.jenis}</td>
+                    <td class="p-2 border text-xs text-slate-500">${item.lat && item.lng ? `Lat: ${item.lat}, Lng: ${item.lng}` : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function cetakRekapOrang() {
+            window.print();
+        }
+
+        // --- FUNGSI UTILITAS ---
         function formatTanggalTampil(strWaktu) {
             if (!strWaktu) return "-";
             let tglSaja = String(strWaktu).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
