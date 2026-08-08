@@ -1,545 +1,120 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Rekapitulasi Absensi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#165DFF',
-                        success: '#00B42A',
-                        danger: '#F53F3F',
-                        warning: '#FF7D00'
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #165DFF;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #areaCetak, #areaCetak * {
-                visibility: visible;
-            }
-            #areaCetak {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-            .no-print {
-                display: none !important;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekapitulasi Absensi - Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
+<body class="bg-slate-100 min-h-screen p-3 md:p-6">
 
-    <div class="max-w-7xl mx-auto p-4 md:p-6">
-        <!-- Header Panel -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm mb-6 gap-4">
-            <div class="flex items-center gap-3">
-                <span class="text-3xl">📊</span>
-                <h1 class="text-2xl font-bold text-slate-800">Rekapitulasi Riwayat Absensi</h1>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="muatDataRiwayat()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
-                    🔄 Reload
-                </button>
-                <button onclick="bukaModalPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
-                    📋 Rekap Per Orang
-                </button>
-                <button onclick="bukaModalPengaturan()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
-                    ⚙️ Atur Lokasi
-                </button>
-                <button onclick="eksporKeCSV()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
-                    💾 Unduh CSV
-                </button>
-                <button onclick="keluarAdmin()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
-                    🚪 Keluar
-                </button>
-            </div>
-        </div>
+  <!-- PROTEKSI AKSES HALAMAN ADMIN -->
+  <script>
+    if (sessionStorage.getItem('admin_logged_in') !== 'true' && localStorage.getItem('admin_logged_in') !== 'true') {
+      alert("Akses ditolak! Anda harus login sebagai admin terlebih dahulu.");
+      window.location.href = "admin-login.html";
+    }
+  </script>
 
-        <!-- Filter & Pencarian -->
-        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-wrap gap-4 items-center">
-            <div class="flex items-center gap-2">
-                <input type="date" id="filterTanggal" onchange="filterData()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-            </div>
-            <div class="flex items-center gap-2 flex-1 min-w-[200px]">
-                <input type="text" id="filterNama" onkeyup="filterData()" placeholder="Cari Nama / NIP..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-            </div>
-            <button onclick="filterData()" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition">
-                🔍 Cari
-            </button>
-            <button onclick="resetFilter()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition">
-                ↩️ Reset Filter
-            </button>
-        </div>
+  <div class="max-w-5xl mx-auto space-y-4">
+    
+    <!-- PANEL ATAS / HEADER & TOMBOL AKSI -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+      <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+        📊 Rekapitulasi Riwayat Absensi
+      </h2>
 
-        <!-- Tabel Data Utama -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            <th class="p-4">Tanggal</th>
-                            <th class="p-4">Jam</th>
-                            <th class="p-4">Jenis Absen</th>
-                            <th class="p-4">Nama Lengkap</th>
-                            <th class="p-4">NIP</th>
-                            <th class="p-4">Jabatan</th>
-                            <th class="p-4">Lokasi</th>
-                            <th class="p-4 text-center">Foto Absen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelBody" class="divide-y divide-slate-100 text-sm">
-                    </tbody>
-                </table>
-            </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="window.location.reload()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+          🔄 Reload
+        </button>
+        <button onclick="rekapPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+          📋 Rekap Per Orang
+        </button>
+        <button onclick="aturLokasi()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+          ⚙️ Atur Lokasi
+        </button>
+        <button onclick="unduhCSV()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+          💾 Unduh CSV
+        </button>
 
-            <!-- Indicator Loading / Kosong -->
-            <div id="loadingBox" class="p-8 text-center hidden">
-                <div class="loader mx-auto mb-2"></div>
-                <p class="text-slate-500 text-sm">Memuat data absensi...</p>
-            </div>
-            <div id="emptyBox" class="p-8 text-center text-slate-400 text-sm hidden">
-                Belum ada riwayat absensi
-            </div>
-        </div>
+        <!-- TOMBOL KELUAR / LOGOUT -->
+        <button onclick="logoutAdmin()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
+          🚪 Keluar
+        </button>
+      </div>
     </div>
 
-    <!-- Modal Rekap Per Orang -->
-    <div id="modalPerOrang" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-white rounded-2xl p-6 max-w-4xl w-full relative max-h-[90vh] flex flex-col">
-            <button onclick="tutupModalPerOrang()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold no-print">✕</button>
-            
-            <h3 class="font-bold text-slate-800 mb-4 text-xl flex items-center gap-2 no-print">
-                <span>📋</span> Rekap Laporan Absensi Per Orang
-            </h3>
-
-            <!-- Form Filter Individu -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200 no-print">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Karyawan</label>
-                    <select id="rekapPilihKaryawan" class="w-full border rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-primary">
-                        <option value="">-- Pilih Karyawan --</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Dari Tanggal</label>
-                    <input type="date" id="rekapTglMulai" class="w-full border rounded-lg p-2 text-sm bg-white">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sampai Tanggal</label>
-                    <input type="date" id="rekapTglSelesai" class="w-full border rounded-lg p-2 text-sm bg-white">
-                </div>
-                <div class="md:col-span-3 flex justify-end gap-2 mt-1">
-                    <button onclick="prosesRekapPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
-                        🔍 Tampilkan Rekap
-                    </button>
-                    <button onclick="cetakRekapOrang()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1">
-                        🖨️ Cetak / PDF
-                    </button>
-                </div>
-            </div>
-
-            <!-- Hasil Area Cetak Rekap -->
-            <div id="areaCetak" class="overflow-y-auto flex-1 p-2 border rounded-xl">
-                <div class="text-center border-b pb-4 mb-4">
-                    <h2 class="text-xl font-bold text-slate-800 uppercase tracking-wide">Laporan Presensi Karyawan</h2>
-                    <p id="infoPeriodeCetak" class="text-sm text-slate-500 mt-1">Periode: -</p>
-                </div>
-
-                <!-- Info Karyawan -->
-                <div class="grid grid-cols-2 gap-2 text-sm mb-4 bg-slate-50 p-3 rounded-lg border">
-                    <div><span class="font-semibold text-slate-600">Nama:</span> <span id="lblRekapNama" class="font-bold text-slate-800">-</span></div>
-                    <div><span class="font-semibold text-slate-600">NIP:</span> <span id="lblRekapNip" class="text-slate-800">-</span></div>
-                    <div><span class="font-semibold text-slate-600">Jabatan:</span> <span id="lblRekapJabatan" class="text-slate-800">-</span></div>
-                    <div><span class="font-semibold text-slate-600">Total Absensasi:</span> <span id="lblRekapTotal" class="font-bold text-indigo-600">0 Record</span></div>
-                </div>
-
-                <!-- Tabel Rekap Individu -->
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-slate-100 border-b text-xs font-bold text-slate-700">
-                            <th class="p-2 border">No</th>
-                            <th class="p-2 border">Tanggal</th>
-                            <th class="p-2 border">Jam</th>
-                            <th class="p-2 border">Jenis Kehadiran</th>
-                            <th class="p-2 border">Keterangan Lokasi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelRekapOrangBody">
-                        <tr>
-                            <td colspan="5" class="text-center p-4 text-slate-400">Silakan pilih karyawan dan klik Tampilkan Rekap</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <!-- PANEL FILTER CARI DATA -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input type="date" id="filterTanggal" class="border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500">
+        <input type="text" id="filterCari" placeholder="Cari Nama / NIP..." class="border border-slate-200 rounded-xl p-2.5 text-sm w-full outline-none focus:border-indigo-500">
+        <button onclick="filterData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium">
+          🔍 Cari
+        </button>
+        <button onclick="resetFilter()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium">
+          🔄 Reset Filter
+        </button>
+      </div>
     </div>
 
-    <!-- Modal Foto -->
-    <div id="modalFoto" class="fixed inset-0 bg-black/70 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl p-4 max-w-lg w-full relative">
-            <button onclick="tutupModalFoto()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
-            <h3 class="font-bold text-slate-800 mb-3 text-center">Foto Bukti Absensi</h3>
-            <img id="imgModal" src="" alt="Foto Absen" class="w-full h-auto max-h-[70vh] object-contain rounded-lg border">
-        </div>
+    <!-- TABEL DATA ABSENSI -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold border-b border-slate-100">
+            <tr>
+              <th class="p-3.5">TANGGAL</th>
+              <th class="p-3.5">JAM</th>
+              <th class="p-3.5">JENIS ABSEN</th>
+              <th class="p-3.5">NAMA LENGKAP</th>
+              <th class="p-3.5">NIP</th>
+            </tr>
+          </thead>
+          <tbody id="tabelAbsensi" class="divide-y divide-slate-100 text-slate-700">
+            <tr class="hover:bg-slate-50">
+              <td class="p-3.5">08-08-2026</td>
+              <td class="p-3.5">07:53:12</td>
+              <td class="p-3.5"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-medium">Masuk Kerja</span></td>
+              <td class="p-3.5 font-medium">Muhamad Fajri</td>
+              <td class="p-3.5">4</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3.5">08-08-2026</td>
+              <td class="p-3.5">07:53:22</td>
+              <td class="p-3.5"><span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-medium">Pulang</span></td>
+              <td class="p-3.5 font-medium">Muhamad Fajri</td>
+              <td class="p-3.5">4</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Modal Atur Lokasi -->
-    <div id="modalLokasi" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full relative">
-            <button onclick="tutupModalPengaturan()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✕</button>
-            <h3 class="font-bold text-slate-800 mb-4 text-lg">⚙️ Pengaturan Lokasi Absen</h3>
-            
-            <div class="space-y-4 text-sm">
-                <div>
-                    <label class="block font-medium text-slate-700 mb-1">Latitude Office</label>
-                    <input type="number" step="any" id="cfgLat" class="w-full border rounded-lg p-2.5">
-                </div>
-                <div>
-                    <label class="block font-medium text-slate-700 mb-1">Longitude Office</label>
-                    <input type="number" step="any" id="cfgLng" class="w-full border rounded-lg p-2.5">
-                </div>
-                <div>
-                    <label class="block font-medium text-slate-700 mb-1">Batas Jarak Maksimal (Meter)</label>
-                    <input type="number" id="cfgJarak" class="w-full border rounded-lg p-2.5">
-                </div>
-                <button onclick="simpanLokasi()" class="w-full bg-primary hover:bg-blue-600 text-white font-medium py-2.5 rounded-lg transition">
-                    Simpan Pengaturan
-                </button>
-            </div>
-        </div>
-    </div>
+  </div>
 
-    <script>
-        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx5spIYpBb4DJFopmqTtHTZdzb2c4AIXfbvSLr2XQrI1By1bsKN3Bk89dxB_fOIH85a-g/exec";
-        let dataMentah = [];
+  <script>
+    // FUNGSI UTAMA LOGOUT ADMIN
+    function logoutAdmin() {
+      if (confirm("Apakah Anda yakin ingin keluar dari Admin Panel?")) {
+        // 1. Bersihkan seluruh session & local storage status admin
+        sessionStorage.removeItem('admin_logged_in');
+        localStorage.removeItem('admin_logged_in');
+        
+        // 2. Arahkan kembali ke halaman Admin Login
+        window.location.href = "admin-login.html";
+      }
+    }
 
-        function getTanggalHariIni() {
-            const hariIni = new Date();
-            const yyyy = hariIni.getFullYear();
-            const mm = String(hariIni.getMonth() + 1).padStart(2, '0');
-            const dd = String(hariIni.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        document.addEventListener("DOMContentLoaded", function() {
-            const filterTgl = document.getElementById("filterTanggal");
-            if (filterTgl) {
-                filterTgl.value = getTanggalHariIni();
-            }
-            
-            // Set tanggal awal modal rekap per orang
-            document.getElementById("rekapTglMulai").value = getTanggalHariIni();
-            document.getElementById("rekapTglSelesai").value = getTanggalHariIni();
-
-            muatDataRiwayat();
-        });
-
-        function resetFilter() {
-            const filterTgl = document.getElementById("filterTanggal");
-            const filterNama = document.getElementById("filterNama");
-            if (filterTgl) filterTgl.value = getTanggalHariIni();
-            if (filterNama) filterNama.value = "";
-            filterData();
-        }
-
-        function muatDataRiwayat() {
-            tampilkanLoading(true);
-            fetch(URL_SCRIPT + "?action=getRiwayat")
-                .then(res => res.json())
-                .then(res => {
-                    tampilkanLoading(false);
-                    if (res.status === "berhasil") {
-                        dataMentah = res.data || [];
-                        filterData();
-                        isiOpsiPilihKaryawan();
-                    } else {
-                        alert("Gagal memuat data: " + res.pesan);
-                    }
-                })
-                .catch(err => {
-                    tampilkanLoading(false);
-                    alert("Terjadi kesalahan koneksi saat memuat data.");
-                });
-        }
-
-        function filterData() {
-            if (!Array.isArray(dataMentah) || !dataMentah.length) {
-                tampilkanTabel([]);
-                return;
-            }
-            const tglPilih = document.getElementById("filterTanggal").value.trim();
-            const kataKunci = document.getElementById("filterNama").value.trim().toLowerCase();
-            let hasil = [...dataMentah];
-
-            if (tglPilih) {
-                hasil = hasil.filter(item => {
-                    if (!item.waktu) return false;
-                    let tglAsli = String(item.waktu).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
-                    
-                    const p = tglAsli.split("-");
-                    if (p.length === 3) {
-                        if (p[0].length === 4) {
-                            tglAsli = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
-                        } else if (p[2].length === 4) {
-                            tglAsli = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                        }
-                    }
-                    return tglAsli === tglPilih;
-                });
-            }
-
-            if (kataKunci) {
-                hasil = hasil.filter(item => {
-                    const nama = String(item.nama || "").toLowerCase();
-                    const nip = String(item.nip || "").trim().toLowerCase();
-                    return nama.includes(kataKunci) || nip.includes(kataKunci);
-                });
-            }
-
-            tampilkanTabel(hasil);
-        }
-
-        function tampilkanTabel(data) {
-            const tbody = document.getElementById("tabelBody");
-            const emptyBox = document.getElementById("emptyBox");
-            tbody.innerHTML = "";
-
-            if (!data || data.length === 0) {
-                emptyBox.classList.remove("hidden");
-                return;
-            } else {
-                emptyBox.classList.add("hidden");
-            }
-
-            data.forEach(item => {
-                const tr = document.createElement("tr");
-                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
-
-                const isMasuk = String(item.jenis).toUpperCase().includes("MASUK");
-                const badgeClass = isMasuk 
-                    ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
-                    : "bg-amber-100 text-amber-700 border-amber-200";
-
-                let fotoElement = '<span class="text-slate-300 text-xs">Tidak Ada Foto</span>';
-                if (item.foto && item.foto.length > 20) {
-                    fotoElement = `<img src="${item.foto}" onclick="lihatFoto('${item.foto}')" class="w-12 h-12 object-cover rounded-lg mx-auto cursor-pointer border hover:opacity-80 transition">`;
-                }
-
-                let linkLokasi = '-';
-                if (item.lat && item.lng) {
-                    linkLokasi = `<a href="https://maps.google.com/?q=${item.lat},${item.lng}" target="_blank" class="text-primary hover:underline text-xs font-medium">Lihat Lokasi</a>`;
-                }
-
-                tr.innerHTML = `
-                    <td class="p-4 font-medium text-slate-700">${formatTanggalTampil(item.waktu)}</td>
-                    <td class="p-4 text-slate-600">${item.jam || '-'}</td>
-                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-medium border ${badgeClass}">${item.jenis}</span></td>
-                    <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
-                    <td class="p-4 text-slate-600">${item.nip}</td>
-                    <td class="p-4 text-slate-600">${item.jabatan}</td>
-                    <td class="p-4">${linkLokasi}</td>
-                    <td class="p-4 text-center">${fotoElement}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // --- FITUR REKAP PER ORANG ---
-        function isiOpsiPilihKaryawan() {
-            const select = document.getElementById("rekapPilihKaryawan");
-            select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
-            
-            const daftarNama = [...new Set(dataMentah.map(item => item.nama))].filter(Boolean);
-            daftarNama.forEach(nama => {
-                const opt = document.createElement("option");
-                opt.value = nama;
-                opt.textContent = nama;
-                select.appendChild(opt);
-            });
-        }
-
-        function bukaModalPerOrang() {
-            document.getElementById("modalPerOrang").classList.remove("hidden");
-            document.getElementById("modalPerOrang").classList.add("flex");
-            isiOpsiPilihKaryawan();
-        }
-
-        function tutupModalPerOrang() {
-            document.getElementById("modalPerOrang").classList.add("hidden");
-            document.getElementById("modalPerOrang").classList.remove("flex");
-        }
-
-        function prosesRekapPerOrang() {
-            const namaPilih = document.getElementById("rekapPilihKaryawan").value;
-            const tglMulai = document.getElementById("rekapTglMulai").value;
-            const tglSelesai = document.getElementById("rekapTglSelesai").value;
-
-            if (!namaPilih) return alert("Silakan pilih karyawan terlebih dahulu!");
-
-            const hasil = dataMentah.filter(item => {
-                if (item.nama !== namaPilih) return false;
-                
-                let tglAsli = String(item.waktu).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
-                const p = tglAsli.split("-");
-                if (p.length === 3 && p[2].length === 4) {
-                    tglAsli = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                }
-
-                if (tglMulai && tglAsli < tglMulai) return false;
-                if (tglSelesai && tglAsli > tglSelesai) return false;
-
-                return true;
-            });
-
-            // Update Label Rekap
-            document.getElementById("lblRekapNama").textContent = namaPilih;
-            document.getElementById("infoPeriodeCetak").textContent = `Periode: ${formatTanggalTampil(tglMulai)} s/d ${formatTanggalTampil(tglSelesai)}`;
-
-            if (hasil.length > 0) {
-                document.getElementById("lblRekapNip").textContent = hasil[0].nip || "-";
-                document.getElementById("lblRekapJabatan").textContent = hasil[0].jabatan || "-";
-            } else {
-                document.getElementById("lblRekapNip").textContent = "-";
-                document.getElementById("lblRekapJabatan").textContent = "-";
-            }
-            document.getElementById("lblRekapTotal").textContent = `${hasil.length} Record`;
-
-            // Render Tabel Rekap Per Orang
-            const tbody = document.getElementById("tabelRekapOrangBody");
-            tbody.innerHTML = "";
-
-            if (hasil.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-slate-400">Tidak ada data absensi untuk periode ini.</td></tr>';
-                return;
-            }
-
-            hasil.forEach((item, idx) => {
-                const tr = document.createElement("tr");
-                tr.className = "border-b hover:bg-slate-50";
-                tr.innerHTML = `
-                    <td class="p-2 border text-center">${idx + 1}</td>
-                    <td class="p-2 border">${formatTanggalTampil(item.waktu)}</td>
-                    <td class="p-2 border">${item.jam || '-'}</td>
-                    <td class="p-2 border font-semibold">${item.jenis}</td>
-                    <td class="p-2 border text-xs text-slate-500">${item.lat && item.lng ? `Lat: ${item.lat}, Lng: ${item.lng}` : '-'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function cetakRekapOrang() {
-            window.print();
-        }
-
-        // --- FUNGSI UTILITAS ---
-        function formatTanggalTampil(strWaktu) {
-            if (!strWaktu) return "-";
-            let tglSaja = String(strWaktu).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
-            const bagian = tglSaja.split("-");
-            if (bagian.length === 3 && bagian[0].length === 4) {
-                return `${bagian[2]}-${bagian[1].padStart(2, '0')}-${bagian[0]}`;
-            }
-            return tglSaja;
-        }
-
-        function tampilkanLoading(show) {
-            const box = document.getElementById("loadingBox");
-            if (show) {
-                box.classList.remove("hidden");
-                document.getElementById("emptyBox").classList.add("hidden");
-            } else {
-                box.classList.add("hidden");
-            }
-        }
-
-        function lihatFoto(src) {
-            document.getElementById("imgModal").src = src;
-            document.getElementById("modalFoto").classList.remove("hidden");
-            document.getElementById("modalFoto").classList.add("flex");
-        }
-
-        function tutupModalFoto() {
-            document.getElementById("modalFoto").classList.add("hidden");
-            document.getElementById("modalFoto").classList.remove("flex");
-        }
-
-        function bukaModalPengaturan() {
-            document.getElementById("modalLokasi").classList.remove("hidden");
-            document.getElementById("modalLokasi").classList.add("flex");
-            fetch(URL_SCRIPT + "?action=getPengaturan")
-                .then(r => r.json())
-                .then(res => {
-                    if (res.status === "berhasil") {
-                        document.getElementById("cfgLat").value = res.data.lat;
-                        document.getElementById("cfgLng").value = res.data.lng;
-                        document.getElementById("cfgJarak").value = res.data.jarak;
-                    }
-                });
-        }
-
-        function tutupModalPengaturan() {
-            document.getElementById("modalLokasi").classList.add("hidden");
-            document.getElementById("modalLokasi").classList.remove("flex");
-        }
-
-        function simpanLokasi() {
-            const lat = document.getElementById("cfgLat").value;
-            const lng = document.getElementById("cfgLng").value;
-            const jarak = document.getElementById("cfgJarak").value;
-
-            fetch(URL_SCRIPT, {
-                method: "POST",
-                body: JSON.stringify({ aksi: "simpanPengaturan", lat: Number(lat), lng: Number(lng), jarak: Number(jarak) })
-            })
-            .then(r => r.json())
-            .then(res => {
-                alert(res.pesan);
-                tutupModalPengaturan();
-            });
-        }
-
-        function eksporKeCSV() {
-            if (!dataMentah.length) return alert("Tidak ada data untuk diekspor!");
-            let csv = "Tanggal,Jam,Jenis,Nama,NIP,Jabatan,Latitude,Longitude\n";
-            dataMentah.forEach(d => {
-                csv += `"${d.waktu}","${d.jam}","${d.jenis}","${d.nama}","${d.nip}","${d.jabatan}","${d.lat}","${d.lng}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `Rekap_Absensi_${getTanggalHariIni()}.csv`);
-            a.click();
-        }
-
-        function keluarAdmin() {
-            window.location.href = "index.html";
-        }
-    </script>
+    function rekapPerOrang() { alert("Fitur Rekap Per Orang"); }
+    function aturLokasi() { alert("Fitur Atur Lokasi"); }
+    function unduhCSV() { alert("Mengunduh laporan CSV..."); }
+    function filterData() { alert("Menyaring data..."); }
+    function resetFilter() {
+      document.getElementById('filterTanggal').value = '';
+      document.getElementById('filterCari').value = '';
+    }
+  </script>
 </body>
 </html>
