@@ -27,7 +27,7 @@
         @media print {
             body * { visibility: hidden; }
             #areaCetak, #areaCetak * { visibility: visible; }
-            #areaCetak { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+            #areaCetak { position: absolute; left: 0; top: 0; width: 100%; border: none !important; display: block !important; }
             .no-print { display: none !important; }
         }
     </style>
@@ -62,13 +62,13 @@
         </div>
 
         <div class="flex gap-3">
-            <button id="btnTampilkanRekap" type="button" class="bg-primary hover:bg-blue-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">Tampilkan Rekap</button>
-            <button id="btnCetak" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">Cetak / PDF</button>
+            <button id="btnTampilkanRekap" type="button" class="bg-primary hover:bg-blue-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">🔍 Tampilkan Rekap</button>
+            <button id="btnCetak" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">🖨️ Cetak / PDF</button>
         </div>
     </div>
 
-    <!-- TAMPILAN LAPORAN PRESENSI (1 BARIS PER HARI/SHIFT) -->
-    <div id="areaCetak" class="card border space-y-4">
+    <!-- TAMPILAN LAPORAN PRESENSI (DISEMBUNYIKAN SECARA DEFAULT / CLASS HIDDEN) -->
+    <div id="areaCetak" class="card border space-y-4 hidden">
         <div class="text-center border-b pb-3">
             <h2 class="font-bold text-lg text-gray-800 tracking-wide">LAPORAN PRESENSI KARYAWAN</h2>
             <p id="infoPeriode" class="text-xs text-gray-500 mt-1">Periode: -</p>
@@ -159,10 +159,17 @@ document.getElementById("btnTampilkanRekap").addEventListener("click", () => {
 
     if (!namaPilih) return alert("Pilih nama karyawan terlebih dahulu!");
 
+    // TAMPILKAN KOTAK LAPORAN SETELAH TOMBOL DIKLIK
+    document.getElementById("areaCetak").classList.remove("hidden");
+
     prosesDanRenderRekap(namaPilih, tglAwal, tglAkhir);
 });
 
 document.getElementById("btnCetak").addEventListener("click", () => {
+    const area = document.getElementById("areaCetak");
+    if(area.classList.contains("hidden")) {
+        return alert("Tampilkan rekap terlebih dahulu sebelum mencetak!");
+    }
     window.print();
 });
 
