@@ -87,6 +87,15 @@
                     <option value="Pulang">🏠 Pulang Kerja</option>
                 </select>
             </div>
+            <!-- TAMBAHAN: Element Input Pilihan Shift Kerja -->
+            <div>
+                <label class="block text-sm font-medium mb-1.5">Pilih Shift Kerja</label>
+                <select id="shift" class="border rounded-lg px-4 py-3 bg-white">
+                    <option value="Shift 1 (08.00-16.00)">Shift 1 (08.00 - 16.00)</option>
+                    <option value="Shift 2 (16.00-00.00)">Shift 2 (16.00 - 00.00)</option>
+                    <option value="Shift 3 (00.00-08.00)">Shift 3 (00.00 - 08.00)</option>
+                </select>
+            </div>
         </div>
 
         <div class="card bg-white rounded-xl shadow-sm p-5 mb-4">
@@ -282,9 +291,11 @@ document.getElementById("simpanAbsen").addEventListener("click", async () => {
 
     pesan("💾 Menyimpan ke server...");
 
+    // TAMBAHAN: Menangkap nilai shift dari elemen select#shift
     const kirim = {
         aksi: "simpanAbsen",
         jenis: document.getElementById("jenis").value,
+        shift: document.getElementById("shift").value, // Sent to backend Code.gs
         nama: userLogin.nama,
         nip: userLogin.nip,
         jabatan: userLogin.jabatan,
