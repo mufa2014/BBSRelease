@@ -3,118 +3,374 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rekapitulasi Absensi - Admin Panel</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Panel Admin - Data Absensi</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+    body { background: #f8fafc; padding: 1rem; max-width: 1400px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: .5rem; }
+    h1 { color: #1e293b; font-size: 1.5rem; }
+    .btn { padding: .5rem 1rem; border-radius: 6px; font-weight: 500; }
+    .card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.05); padding: 1.25rem; margin-bottom: 1.25rem; }
+    .nav-tabs { margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; }
+    .nav-tabs .nav-link { color: #64748b; border: none; padding: .75rem 1rem; }
+    .nav-tabs .nav-link.active { color: #2563eb; border-bottom: 2px solid #2563eb; background: transparent; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    table { width: 100%; font-size: .9rem; }
+    th { background: #f1f5f9; font-weight: 600; }
+    th, td { padding: .6rem; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .foto-absen { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; }
+    .modal-backdrop { background: rgba(0,0,0,.5); position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; z-index: 999; }
+    .modal-backdrop.show { display: flex; }
+    .modal-box { background: white; border-radius: 10px; padding: 1.5rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .btn-tutup { background: none; border: none; font-size: 1.2rem; color: #94a3b8; cursor: pointer; }
+    .alert { padding: .75rem; border-radius: 6px; margin-bottom: 1rem; display: none; }
+    .alert.show { display: block; }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-3 md:p-6">
+<body>
 
-  <!-- PROTEKSI AKSES HALAMAN ADMIN -->
-  <script>
-    if (sessionStorage.getItem('admin_logged_in') !== 'true' && localStorage.getItem('admin_logged_in') !== 'true') {
-      alert("Akses ditolak! Anda harus login sebagai admin terlebih dahulu.");
-      window.location.href = "admin-login.html";
-    }
-  </script>
+  <div class="header">
+    <h1>⚙️ Panel Admin Absensi</h1>
+    <button onclick="keluarAdmin()" class="btn btn-outline-danger">🚪 Keluar</button>
+  </div>
 
-  <div class="max-w-5xl mx-auto space-y-4">
-    
-    <!-- PANEL ATAS / HEADER & TOMBOL AKSI -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-      <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-        📊 Rekapitulasi Riwayat Absensi
-      </h2>
+  <!-- NAVIGASI TAB -->
+  <ul class="nav nav-tabs" id="tabMenu">
+    <li class="nav-item">
+      <button class="nav-link active" data-tab="karyawan">👥 Data Karyawan</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-tab="riwayat">📋 Riwayat Absen</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-tab="pengaturan">⚙️ Pengaturan Lokasi</button>
+    </li>
+  </ul>
 
-      <div class="flex flex-wrap gap-2">
-        <button onclick="window.location.reload()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
-          🔄 Reload
-        </button>
-        <button onclick="rekapPerOrang()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
-          📋 Rekap Per Orang
-        </button>
-        <button onclick="aturLokasi()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
-          ⚙️ Atur Lokasi
-        </button>
-        <button onclick="unduhCSV()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
-          💾 Unduh CSV
-        </button>
-
-        <!-- TOMBOL KELUAR / LOGOUT -->
-        <button onclick="logoutAdmin()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition">
-          🚪 Keluar
-        </button>
+  <!-- ISI TAB 1: KARYAWAN -->
+  <div class="tab-content active" id="tab-karyawan">
+    <div class="card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">Daftar Karyawan</h5>
+        <button onclick="bukaModalTambah()" class="btn btn-primary">➕ Tambah Baru</button>
       </div>
-    </div>
-
-    <!-- PANEL FILTER CARI DATA -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-      <div class="flex flex-col sm:flex-row gap-2">
-        <input type="date" id="filterTanggal" class="border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500">
-        <input type="text" id="filterCari" placeholder="Cari Nama / NIP..." class="border border-slate-200 rounded-xl p-2.5 text-sm w-full outline-none focus:border-indigo-500">
-        <button onclick="filterData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium">
-          🔍 Cari
-        </button>
-        <button onclick="resetFilter()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium">
-          🔄 Reset Filter
-        </button>
-      </div>
-    </div>
-
-    <!-- TABEL DATA ABSENSI -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold border-b border-slate-100">
+      <div id="alertKaryawan" class="alert"></div>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
             <tr>
-              <th class="p-3.5">TANGGAL</th>
-              <th class="p-3.5">JAM</th>
-              <th class="p-3.5">JENIS ABSEN</th>
-              <th class="p-3.5">NAMA LENGKAP</th>
-              <th class="p-3.5">NIP</th>
+              <th>No</th>
+              <th>Nama Lengkap</th>
+              <th>NIP</th>
+              <th>Jabatan</th>
+              <th>Aksi</th>
             </tr>
           </thead>
-          <tbody id="tabelAbsensi" class="divide-y divide-slate-100 text-slate-700">
-            <tr class="hover:bg-slate-50">
-              <td class="p-3.5">08-08-2026</td>
-              <td class="p-3.5">07:53:12</td>
-              <td class="p-3.5"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-medium">Masuk Kerja</span></td>
-              <td class="p-3.5 font-medium">Muhamad Fajri</td>
-              <td class="p-3.5">4</td>
-            </tr>
-            <tr class="hover:bg-slate-50">
-              <td class="p-3.5">08-08-2026</td>
-              <td class="p-3.5">07:53:22</td>
-              <td class="p-3.5"><span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-medium">Pulang</span></td>
-              <td class="p-3.5 font-medium">Muhamad Fajri</td>
-              <td class="p-3.5">4</td>
-            </tr>
+          <tbody id="tabelKaryawan">
+            <tr><td colspan="5" class="text-center">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+  </div>
 
+  <!-- ISI TAB 2: RIWAYAT ABSEN -->
+  <div class="tab-content" id="tab-riwayat">
+    <div class="card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">Riwayat Kehadiran</h5>
+        <button onclick="muatRiwayat()" class="btn btn-outline-primary">🔄 Segarkan</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jam</th>
+              <th>Nama</th>
+              <th>Jenis</th>
+              <th>Lokasi</th>
+              <th>Foto</th>
+            </tr>
+          </thead>
+          <tbody id="tabelRiwayat">
+            <tr><td colspan="6" class="text-center">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ISI TAB 3: PENGATURAN -->
+  <div class="tab-content" id="tab-pengaturan">
+    <div class="card">
+      <h5 class="mb-3">Pengaturan Lokasi Kantor</h5>
+      <div id="alertPengaturan" class="alert"></div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Latitude</label>
+          <input type="text" id="latKantor" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Longitude</label>
+          <input type="text" id="lngKantor" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Batas Jarak (Meter)</label>
+          <input type="number" id="jarakKantor" class="form-control" min="10" value="100">
+        </div>
+      </div>
+      <button onclick="simpanPengaturan()" class="btn btn-success mt-3">💾 Simpan Pengaturan</button>
+    </div>
+  </div>
+
+  <!-- MODAL FORM TAMBAH/EDIT KARYAWAN -->
+  <div class="modal-backdrop" id="modalForm">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h5 id="judulModal">Tambah Karyawan</h5>
+        <button class="btn-tutup" onclick="tutupModal()">&times;</button>
+      </div>
+      <div id="alertForm" class="alert"></div>
+      <form id="formKaryawan">
+        <input type="hidden" id="barisData">
+        <div class="mb-3">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" id="inNama" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">NIP</label>
+          <input type="text" id="inNip" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Jabatan</label>
+          <input type="text" id="inJabatan" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Kata Sandi Absen</label>
+          <input type="text" id="inSandi" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Simpan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL LIHAT FOTO -->
+  <div class="modal-backdrop" id="modalFoto" onclick="tutupModalFoto()">
+    <div class="modal-box text-center" style="max-width:400px;">
+      <img id="gambarFoto" style="width:100%; border-radius:8px;">
+    </div>
   </div>
 
   <script>
-    // FUNGSI UTAMA LOGOUT ADMIN
-    function logoutAdmin() {
-      if (confirm("Apakah Anda yakin ingin keluar dari Admin Panel?")) {
-        // 1. Bersihkan seluruh session & local storage status admin
-        sessionStorage.removeItem('admin_logged_in');
-        localStorage.removeItem('admin_logged_in');
-        
-        // 2. Arahkan kembali ke halaman Admin Login
-        window.location.href = "admin-login.html";
+    // ==============================================
+    // 🔒 PENGECEKAN LOGIN - TIDAK MUNCUL ALERT BERULANG
+    // ==============================================
+    if (localStorage.getItem("adminSudahLogin") !== "YA") {
+      window.location.replace("admin-login.html");
+    }
+
+    // 🔗 LINK GOOGLE APPS SCRIPT
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwR351ahfsHDejRrZWja6e1JNcV9uKtCA5bwy5C5JRNGKikC13vGxFuk0gxUIZ_sismYw/exec";
+
+    // ==============================================
+    // 📌 NAVIGASI TAB
+    // ==============================================
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        if(btn.dataset.tab === 'karyawan') muatKaryawan();
+        if(btn.dataset.tab === 'riwayat') muatRiwayat();
+        if(btn.dataset.tab === 'pengaturan') muatPengaturan();
+      });
+    });
+
+    // ==============================================
+    // 📋 FUNGSI DATA KARYAWAN
+    // ==============================================
+    function muatKaryawan() {
+      fetch(URL_SCRIPT + "?action=getPegawai&_t=" + Date.now())
+      .then(res => res.json())
+      .then(res => {
+        const tbody = document.getElementById('tabelKaryawan');
+        if(res.status !== "berhasil" || !res.data.length){
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Belum ada data karyawan</td></tr>`;
+          return;
+        }
+        let html = "";
+        res.data.forEach((d,i) => {
+          html += `<tr>
+            <td>${i+1}</td>
+            <td>${d.nama}</td>
+            <td>${d.nip}</td>
+            <td>${d.jabatan}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary me-1" onclick="editData(${d.row},'${d.nama}','${d.nip}','${d.jabatan}','${d.pin}')">Ubah</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="hapusData(${d.row},'${d.nama}')">Hapus</button>
+            </td>
+          </tr>`;
+        });
+        tbody.innerHTML = html;
+      })
+      .catch(err => tampilPesan('alertKaryawan', 'danger', 'Gagal memuat data: ' + err.message));
+    }
+
+    function bukaModalTambah(){
+      document.getElementById('judulModal').innerText = "Tambah Karyawan";
+      document.getElementById('barisData').value = "";
+      document.getElementById('formKaryawan').reset();
+      document.getElementById('modalForm').classList.add('show');
+    }
+
+    function editData(row,nama,nip,jabatan,sandi){
+      document.getElementById('judulModal').innerText = "Ubah Data Karyawan";
+      document.getElementById('barisData').value = row;
+      document.getElementById('inNama').value = nama;
+      document.getElementById('inNip').value = nip;
+      document.getElementById('inJabatan').value = jabatan;
+      document.getElementById('inSandi').value = sandi;
+      document.getElementById('modalForm').classList.add('show');
+    }
+
+    function hapusData(row,nama){
+      if(!confirm(`Yakin hapus ${nama}?`)) return;
+      fetch(URL_SCRIPT, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({aksi:"hapusKaryawan", row:row})
+      })
+      .then(res => res.json())
+      .then(res => {
+        tampilPesan('alertKaryawan', res.status==="berhasil"?'success':'danger', res.pesan);
+        muatKaryawan();
+      });
+    }
+
+    document.getElementById('formKaryawan').addEventListener('submit', e => {
+      e.preventDefault();
+      const row = document.getElementById('barisData').value;
+      const data = {
+        aksi: row ? "editKaryawan" : "tambahKaryawan",
+        row: row,
+        nama: document.getElementById('inNama').value.trim(),
+        nip: document.getElementById('inNip').value.trim(),
+        jabatan: document.getElementById('inJabatan').value.trim(),
+        sandi: document.getElementById('inSandi').value.trim()
+      };
+      fetch(URL_SCRIPT, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(res => {
+        tampilPesan('alertKaryawan', res.status==="berhasil"?'success':'danger', res.pesan);
+        tutupModal();
+        muatKaryawan();
+      });
+    });
+
+    // ==============================================
+    // 📊 RIWAYAT ABSEN
+    // ==============================================
+    function muatRiwayat() {
+      fetch(URL_SCRIPT + "?action=ambilSemuaData&_t=" + Date.now())
+      .then(res => res.json())
+      .then(res => {
+        const tbody = document.getElementById('tabelRiwayat');
+        const data = Array.isArray(res) ? res : (res.data || []);
+        if(!data.length){
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Belum ada riwayat absen</td></tr>`;
+          return;
+        }
+        let html = "";
+        data.forEach(d => {
+          const adaFoto = d.foto && d.foto.length > 10;
+          html += `<tr>
+            <td>${d.waktu}</td>
+            <td>${d.jam}</td>
+            <td>${d.nama}</td>
+            <td><span class="badge ${d.jenis.includes('Masuk')?'bg-success':'bg-warning'}">${d.jenis}</span></td>
+            <td class="small">${d.lat}, ${d.lng}</td>
+            <td>${adaFoto?`<img src="${d.foto}" class="foto-absen" onclick="bukaFoto('${d.foto}')">`:'-'}</td>
+          </tr>`;
+        });
+        tbody.innerHTML = html;
+      });
+    }
+
+    // ==============================================
+    // ⚙️ PENGATURAN LOKASI
+    // ==============================================
+    function muatPengaturan() {
+      fetch(URL_SCRIPT + "?action=getPengaturan")
+      .then(res => res.json())
+      .then(res => {
+        if(res.status === "berhasil"){
+          document.getElementById('latKantor').value = res.data.lat;
+          document.getElementById('lngKantor').value = res.data.lng;
+          document.getElementById('jarakKantor').value = res.data.jarak;
+        }
+      });
+    }
+
+    function simpanPengaturan(){
+      const data = {
+        aksi: "simpanPengaturan",
+        lat: document.getElementById('latKantor').value,
+        lng: document.getElementById('lngKantor').value,
+        jarak: document.getElementById('jarakKantor').value
+      };
+      fetch(URL_SCRIPT, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(res => {
+        tampilPesan('alertPengaturan', res.status==="berhasil"?'success':'danger', res.pesan);
+      });
+    }
+
+    // ==============================================
+    // 🧰 FUNGSI PEMBANTU
+    // ==============================================
+    function tampilPesan(idElm, jenis, teks){
+      const elm = document.getElementById(idElm);
+      elm.className = `alert alert-${jenis} show`;
+      elm.innerText = teks;
+      setTimeout(() => elm.classList.remove('show'), 3000);
+    }
+
+    function tutupModal(){
+      document.getElementById('modalForm').classList.remove('show');
+    }
+
+    function bukaFoto(src){
+      document.getElementById('gambarFoto').src = src;
+      document.getElementById('modalFoto').classList.add('show');
+    }
+
+    function tutupModalFoto(){
+      document.getElementById('modalFoto').classList.remove('show');
+    }
+
+    function keluarAdmin(){
+      if(confirm("Yakin ingin keluar?")){
+        localStorage.removeItem("adminSudahLogin");
+        window.location.replace("admin-login.html");
       }
     }
 
-    function rekapPerOrang() { alert("Fitur Rekap Per Orang"); }
-    function aturLokasi() { alert("Fitur Atur Lokasi"); }
-    function unduhCSV() { alert("Mengunduh laporan CSV..."); }
-    function filterData() { alert("Menyaring data..."); }
-    function resetFilter() {
-      document.getElementById('filterTanggal').value = '';
-      document.getElementById('filterCari').value = '';
-    }
+    // MUAT DATA AWAL
+    muatKaryawan();
   </script>
+
 </body>
 </html>
