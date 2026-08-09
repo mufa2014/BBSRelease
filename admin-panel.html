@@ -36,8 +36,8 @@
 
 <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-800">📋 Panel Admin - Laporan Rekap Absensi</h1>
-        <button id="btnReload" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition">🔄 Refresh Data</button>
+        <h1 class="text-2xl font-bold text-gray-800">Panel Admin - Laporan Rekap Absensi</h1>
+        <button id="btnReload" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition">Refresh Data</button>
     </div>
 
     <!-- PANEL FILTER REKAP -->
@@ -46,24 +46,24 @@
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Pilih Karyawan</label>
+                <label for="filterKaryawan" class="block text-xs font-semibold text-gray-600 mb-1">Pilih Karyawan</label>
                 <select id="filterKaryawan" class="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="">-- Memuat Karyawan... --</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Dari Tanggal</label>
+                <label for="filterTglAwal" class="block text-xs font-semibold text-gray-600 mb-1">Dari Tanggal</label>
                 <input type="date" id="filterTglAwal" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Sampai Tanggal</label>
+                <label for="filterTglAkhir" class="block text-xs font-semibold text-gray-600 mb-1">Sampai Tanggal</label>
                 <input type="date" id="filterTglAkhir" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
             </div>
         </div>
 
         <div class="flex gap-3">
-            <button id="btnTampilkanRekap" class="bg-primary hover:bg-blue-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">🔍 Tampilkan Rekap</button>
-            <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">🖨️ Cetak / PDF</button>
+            <button id="btnTampilkanRekap" type="button" class="bg-primary hover:bg-blue-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">Tampilkan Rekap</button>
+            <button id="btnCetak" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-5 rounded-lg text-sm font-semibold transition">Cetak / PDF</button>
         </div>
     </div>
 
@@ -85,7 +85,7 @@
             </div>
         </div>
 
-        <!-- TABEL REKAP 1 BARIS (JAM MASUK & PULANG DENGAN FORMAT TANGGAL DD-MM-YYYY) -->
+        <!-- TABEL REKAP 1 BARIS PER HARI/SHIFT -->
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left border-collapse bg-white">
                 <thead class="bg-gray-100 text-gray-700 font-semibold border">
@@ -114,12 +114,10 @@ const LINK_API = "https://script.google.com/macros/s/AKfycbx5spIYpBb4DJFopmqTtHT
 let daftarKaryawan = [];
 let semuaRiwayatAbsen = [];
 
-// Format Tanggal ke DD-MM-YYYY
 function formatTanggalIndo(tglStr) {
     if (!tglStr || tglStr === "-") return "-";
     const p = tglStr.split("-");
     if (p.length === 3) {
-        // Jika format yyyy-mm-dd
         if (p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`;
     }
     return tglStr;
@@ -164,6 +162,10 @@ document.getElementById("btnTampilkanRekap").addEventListener("click", () => {
     prosesDanRenderRekap(namaPilih, tglAwal, tglAkhir);
 });
 
+document.getElementById("btnCetak").addEventListener("click", () => {
+    window.print();
+});
+
 function prosesDanRenderRekap(nama, tglAwal, tglAkhir) {
     const detailUser = daftarKaryawan.find(k => k.nama === nama) || { nip: "-", jabatan: "-" };
     document.getElementById("rekapNama").textContent = nama;
@@ -174,7 +176,6 @@ function prosesDanRenderRekap(nama, tglAwal, tglAkhir) {
     const infoAkhir = tglAkhir ? formatTanggalIndo(tglAkhir) : 'Semua';
     document.getElementById("infoPeriode").textContent = `Periode: ${infoAwal} s/d ${infoAkhir}`;
 
-    // Filter Data berdasarkan Nama dan Rentang Tanggal
     const dataFiltered = semuaRiwayatAbsen.filter(item => {
         if (item.nama !== nama) return false;
         if (tglAwal && item.waktu < tglAwal) return false;
@@ -182,7 +183,6 @@ function prosesDanRenderRekap(nama, tglAwal, tglAkhir) {
         return true;
     });
 
-    // GROUPING DATA: Tanggal + Shift = 1 Baris
     const rekapMap = {};
 
     dataFiltered.forEach(item => {
@@ -210,7 +210,6 @@ function prosesDanRenderRekap(nama, tglAwal, tglAkhir) {
         }
     });
 
-    // RENDER HASIL GROUPING KE TABEL
     const tbody = document.getElementById("tabelRekapBody");
     tbody.innerHTML = "";
 
@@ -226,7 +225,7 @@ function prosesDanRenderRekap(nama, tglAwal, tglAkhir) {
     dataGrouped.forEach(row => {
         let ketLokasi = "-";
         if (row.lokasiMasuk && row.lokasiPulang) {
-            ketLokasi = `Lat: ${row.lokasiMasuk.replace('Lat: ','')}`;
+            ketLokasi = `${row.lokasiMasuk}`;
         } else if (row.lokasiMasuk) {
             ketLokasi = row.lokasiMasuk;
         } else if (row.lokasiPulang) {
