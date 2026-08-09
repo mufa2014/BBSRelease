@@ -286,17 +286,14 @@
                 });
         }
 
-        // Helper untuk menormalisasi tanggal ke format standar YYYY-MM-DD
         function parseKeStandardTanggal(rawStr) {
             if (!rawStr) return "";
             let clean = String(rawStr).split("T")[0].split(" ")[0].replace(/[/.]/g, "-");
             let p = clean.split("-");
             if (p.length === 3) {
                 if (p[0].length === 4) {
-                    // YYYY-MM-DD
                     return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
                 } else if (p[2].length === 4) {
-                    // DD-MM-YYYY -> YYYY-MM-DD
                     return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                 }
             }
@@ -309,18 +306,16 @@
                 return;
             }
 
-            const tglPilih = document.getElementById("filterTanggal").value.trim(); // YYYY-MM-DD
+            const tglPilih = document.getElementById("filterTanggal").value.trim();
             const kataKunci = document.getElementById("filterNama").value.trim().toLowerCase();
 
             let hasil = dataMentah.filter(item => {
                 let tglItem = parseKeStandardTanggal(item.waktu);
                 
-                // Filter tanggal
                 if (tglPilih && tglItem !== tglPilih) {
                     return false;
                 }
 
-                // Filter kata kunci (nama / NIP)
                 if (kataKunci) {
                     const nama = String(item.nama || "").toLowerCase();
                     const nip = String(item.nip || "").trim().toLowerCase();
@@ -467,7 +462,7 @@
             let std = parseKeStandardTanggal(strWaktu);
             let p = std.split("-");
             if (p.length === 3) {
-                return `${p[2]}-${p[1]}-${p[0]}`; // Ubah YYYY-MM-DD menjadi DD-MM-YYYY
+                return `${p[2]}-${p[1]}-${p[0]}`;
             }
             return strWaktu;
         }
@@ -542,8 +537,15 @@
             a.click();
         }
 
+        // Hapus session/cookie jika ada dan redirect ke halaman login admin
         function keluarAdmin() {
-            window.location.href = "index.html";
+            sessionStorage.removeItem("adminLoggedIn");
+            localStorage.removeItem("adminSession");
+            
+            // Mengarahkan kembali ke halaman login admin
+            window.location.href = "admin-login.html"; 
+            // Catatan: Jika nama file login admin Anda adalah "admin.html", 
+            // silakan ganti "admin-login.html" di atas menjadi "admin.html"
         }
     </script>
 </body>
