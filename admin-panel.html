@@ -59,7 +59,10 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm mb-6 gap-4">
             <div class="flex items-center gap-3">
                 <span class="text-3xl">📊</span>
-                <h1 class="text-2xl font-bold text-slate-800">Rekapitulasi Riwayat Absensi</h1>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Rekapitulasi Riwayat Absensi</h1>
+                    <p class="text-xs text-slate-400">Sistem Informasi Presensi Karyawan</p>
+                </div>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button onclick="muatDataRiwayat()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition shadow-sm">
@@ -80,10 +83,38 @@
             </div>
         </div>
 
+        <!-- Kartu Statistik Ringkas -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-primary flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Total Data</p>
+                    <h3 id="statTotal" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+                <span class="text-2xl bg-blue-50 p-2 rounded-lg">📝</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Absen Masuk</p>
+                    <h3 id="statMasuk" class="text-2xl font-bold text-emerald-600">0</h3>
+                </div>
+                <span class="text-2xl bg-emerald-50 p-2 rounded-lg">🟢</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-500 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Absen Pulang</p>
+                    <h3 id="statPulang" class="text-2xl font-bold text-amber-600">0</h3>
+                </div>
+                <span class="text-2xl bg-amber-50 p-2 rounded-lg">🟠</span>
+            </div>
+        </div>
+
         <!-- Filter & Pencarian -->
-        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-wrap gap-3 items-center">
             <div class="flex items-center gap-2">
                 <input type="date" id="filterTanggal" onchange="filterData()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                <button onclick="setTanggalHariIni()" class="bg-blue-50 text-primary hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg text-xs font-semibold transition">
+                    📅 Hari Ini
+                </button>
             </div>
             <div class="flex items-center gap-2 flex-1 min-w-[200px]">
                 <input type="text" id="filterNama" onkeyup="filterData()" placeholder="Cari Nama / NIP..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
@@ -247,16 +278,19 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const filterTgl = document.getElementById("filterTanggal");
-            if (filterTgl) {
-                filterTgl.value = getTanggalHariIni();
-            }
-            
-            document.getElementById("rekapTglMulai").value = getTanggalHariIni();
-            document.getElementById("rekapTglSelesai").value = getTanggalHariIni();
-
+            setTanggalHariIni();
             muatDataRiwayat();
         });
+
+        function setTanggalHariIni() {
+            const today = getTanggalHariIni();
+            const filterTgl = document.getElementById("filterTanggal");
+            if (filterTgl) filterTgl.value = today;
+            
+            document.getElementById("rekapTglMulai").value = today;
+            document.getElementById("rekapTglSelesai").value = today;
+            filterData();
+        }
 
         function resetFilter() {
             const filterTgl = document.getElementById("filterTanggal");
@@ -303,6 +337,7 @@
         function filterData() {
             if (!Array.isArray(dataMentah) || !dataMentah.length) {
                 tampilkanTabel([]);
+                updateStatistik([]);
                 return;
             }
 
@@ -328,6 +363,17 @@
             });
 
             tampilkanTabel(hasil);
+            updateStatistik(hasil);
+        }
+
+        function updateStatistik(data) {
+            const total = data.length;
+            const masuk = data.filter(d => String(d.jenis).toUpperCase().includes("MASUK")).length;
+            const pulang = data.filter(d => String(d.jenis).toUpperCase().includes("PULANG")).length;
+
+            document.getElementById("statTotal").textContent = total;
+            document.getElementById("statMasuk").textContent = masuk;
+            document.getElementById("statPulang").textContent = pulang;
         }
 
         function tampilkanTabel(data) {
@@ -351,6 +397,12 @@
                     ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
                     : "bg-amber-100 text-amber-700 border-amber-200";
 
+                // Peringatan jam lewat pukul 08:00
+                let jamWarna = "text-slate-600";
+                if (isMasuk && item.jam && item.jam > "08:00:00") {
+                    jamWarna = "text-rose-600 font-semibold";
+                }
+
                 let fotoElement = '<span class="text-slate-300 text-xs">Tidak Ada Foto</span>';
                 if (item.foto && item.foto.length > 20) {
                     fotoElement = `<img src="${item.foto}" onclick="lihatFoto('${item.foto}')" class="w-12 h-12 object-cover rounded-lg mx-auto cursor-pointer border hover:opacity-80 transition">`;
@@ -363,7 +415,7 @@
 
                 tr.innerHTML = `
                     <td class="p-4 font-medium text-slate-700">${formatTanggalTampil(item.waktu)}</td>
-                    <td class="p-4 text-slate-600">${item.jam || '-'}</td>
+                    <td class="p-4 ${jamWarna}">${item.jam || '-'}</td>
                     <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-medium border ${badgeClass}">${item.jenis}</span></td>
                     <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-600">${item.nip}</td>
@@ -537,15 +589,12 @@
             a.click();
         }
 
-        // Hapus session/cookie jika ada dan redirect ke halaman login admin
         function keluarAdmin() {
-            sessionStorage.removeItem("adminLoggedIn");
-            localStorage.removeItem("adminSession");
-            
-            // Mengarahkan kembali ke halaman login admin
-            window.location.href = "admin-login.html"; 
-            // Catatan: Jika nama file login admin Anda adalah "admin.html", 
-            // silakan ganti "admin-login.html" di atas menjadi "admin.html"
+            if (confirm("Apakah Anda yakin ingin keluar dari halaman admin?")) {
+                sessionStorage.removeItem("adminLoggedIn");
+                localStorage.removeItem("adminSession");
+                window.location.href = "admin-login.html";
+            }
         }
     </script>
 </body>
