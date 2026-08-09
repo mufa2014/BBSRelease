@@ -136,6 +136,7 @@
                             <th class="p-4">Tanggal</th>
                             <th class="p-4">Jam</th>
                             <th class="p-4">Jenis Absen</th>
+                            <th class="p-4">Shift Kerja</th>
                             <th class="p-4">Nama Lengkap</th>
                             <th class="p-4">NIP</th>
                             <th class="p-4">Jabatan</th>
@@ -217,12 +218,13 @@
                             <th class="p-2 border">Tanggal</th>
                             <th class="p-2 border">Jam</th>
                             <th class="p-2 border">Jenis Kehadiran</th>
+                            <th class="p-2 border">Shift</th>
                             <th class="p-2 border">Keterangan Lokasi</th>
                         </tr>
                     </thead>
                     <tbody id="tabelRekapOrangBody">
                         <tr>
-                            <td colspan="5" class="text-center p-4 text-slate-400">Silakan pilih karyawan dan klik Tampilkan Rekap</td>
+                            <td colspan="6" class="text-center p-4 text-slate-400">Silakan pilih karyawan dan klik Tampilkan Rekap</td>
                         </tr>
                     </tbody>
                 </table>
@@ -397,12 +399,6 @@
                     ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
                     : "bg-amber-100 text-amber-700 border-amber-200";
 
-                // Peringatan jam lewat pukul 08:00
-                let jamWarna = "text-slate-600";
-                if (isMasuk && item.jam && item.jam > "08:00:00") {
-                    jamWarna = "text-rose-600 font-semibold";
-                }
-
                 let fotoElement = '<span class="text-slate-300 text-xs">Tidak Ada Foto</span>';
                 if (item.foto && item.foto.length > 20) {
                     fotoElement = `<img src="${item.foto}" onclick="lihatFoto('${item.foto}')" class="w-12 h-12 object-cover rounded-lg mx-auto cursor-pointer border hover:opacity-80 transition">`;
@@ -415,8 +411,9 @@
 
                 tr.innerHTML = `
                     <td class="p-4 font-medium text-slate-700">${formatTanggalTampil(item.waktu)}</td>
-                    <td class="p-4 ${jamWarna}">${item.jam || '-'}</td>
+                    <td class="p-4 text-slate-600">${item.jam || '-'}</td>
                     <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-medium border ${badgeClass}">${item.jenis}</span></td>
+                    <td class="p-4 font-medium text-indigo-600">${item.shift || '-'}</td>
                     <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-600">${item.nip}</td>
                     <td class="p-4 text-slate-600">${item.jabatan}</td>
@@ -486,7 +483,7 @@
             tbody.innerHTML = "";
 
             if (hasil.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-slate-400">Tidak ada data absensi untuk periode ini.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-slate-400">Tidak ada data absensi untuk periode ini.</td></tr>';
                 return;
             }
 
@@ -498,6 +495,7 @@
                     <td class="p-2 border">${formatTanggalTampil(item.waktu)}</td>
                     <td class="p-2 border">${item.jam || '-'}</td>
                     <td class="p-2 border font-semibold">${item.jenis}</td>
+                    <td class="p-2 border text-indigo-600 font-medium">${item.shift || '-'}</td>
                     <td class="p-2 border text-xs text-slate-500">${item.lat && item.lng ? `Lat: ${item.lat}, Lng: ${item.lng}` : '-'}</td>
                 `;
                 tbody.appendChild(tr);
@@ -577,9 +575,9 @@
 
         function eksporKeCSV() {
             if (!dataMentah.length) return alert("Tidak ada data untuk diekspor!");
-            let csv = "Tanggal,Jam,Jenis,Nama,NIP,Jabatan,Latitude,Longitude\n";
+            let csv = "Tanggal,Jam,Jenis,Shift,Nama,NIP,Jabatan,Latitude,Longitude\n";
             dataMentah.forEach(d => {
-                csv += `"${d.waktu}","${d.jam}","${d.jenis}","${d.nama}","${d.nip}","${d.jabatan}","${d.lat}","${d.lng}"\n`;
+                csv += `"${d.waktu}","${d.jam}","${d.jenis}","${d.shift || '-'}","${d.nama}","${d.nip}","${d.jabatan}","${d.lat}","${d.lng}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
